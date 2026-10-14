@@ -41,4 +41,5 @@ cuenta como no respondida, y sus respuestas se descartan al guardar.
 | `input` | `integer`, `phone` o `url` para validar `short_text`; los enteros van a `numeric_value` |
 | `min`, `max`, `max_question` | Rango de un entero; `max_question` = no puede superar otra respuesta |
 | `scores` | Puntaje de cada opción de un `likert`; las opciones sin puntaje (`no_sabe`) no entran en la media |
+| `widget: "dropdown"` | Mostrar un `single_choice` como lista desplegable en vez de botones de radio |
 | `store: "contact"`, `contact_field` | Se guarda en `tss_submission_contacts`, no en `tss_answers` |

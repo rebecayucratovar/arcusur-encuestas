@@ -7,9 +7,11 @@
       "title": "Datos generales",
       "questions": [
         {"code": "edad", "type": "single_choice", "required": true,
+         "config": {"widget": "dropdown"},
          "prompt": "Edad que tiene actualmente:",
          "options": [["15_18", "15 - 18 años"], ["19_22", "19 - 22 años"], ["23_26", "23 - 26 años"], ["27_30", "27 - 30 años"], ["31_34", "31 - 34 años"], ["35_mas", "35 años o más"]]},
         {"code": "genero", "type": "single_choice", "required": true,
+         "config": {"widget": "dropdown"},
          "prompt": "Género:",
          "options": [["hombre", "Hombre"], ["mujer", "Mujer"]]},
         {"code": "formacion", "type": "single_choice", "required": true,

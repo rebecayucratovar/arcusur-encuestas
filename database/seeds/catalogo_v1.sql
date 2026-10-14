@@ -33,7 +33,7 @@ begin
                              required, position, configuration, display_condition)
   values (v_section, 'edad', 'Edad que tiene actualmente:', null,
           'single_choice', true, 1,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null}'::jsonb,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "widget": "dropdown"}'::jsonb,
           null)
   returning id into v_question;
   insert into tss_question_options (question_id, value, label, position) values
@@ -48,7 +48,7 @@ begin
                              required, position, configuration, display_condition)
   values (v_section, 'genero', 'Género:', null,
           'single_choice', true, 2,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null}'::jsonb,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "widget": "dropdown"}'::jsonb,
           null)
   returning id into v_question;
   insert into tss_question_options (question_id, value, label, position) values
