@@ -17,39 +17,15 @@ AQUI = Path(__file__).resolve().parent
 SALIDA = AQUI.parent / "seeds" / "catalogo_v1.sql"
 ENCUESTAS = ["titulados", "empleadores"]
 
+# La evaluación de condiciones vive en el backend; se reutiliza aquí.
+sys.path.insert(0, str(AQUI.parents[1] / "backend"))
+from app.condiciones import evaluar  # noqa: E402
+
 TIPOS = {"single_choice", "multiple_choice", "likert", "short_text", "long_text", "email"}
 CON_OPCIONES = {"single_choice", "multiple_choice", "likert"}
 
 
 # ---------------------------------------------------------------- condiciones
-
-def evaluar(cond, respuestas):
-    """Evalúa un display_condition contra {codigo: valor | [valores]}.
-
-    Formatos:
-        {"q": "codigo", "eq": "valor"}
-        {"q": "codigo", "in": ["v1", "v2"]}
-        {"q": "codigo", "answered": true}
-        {"all": [cond, ...]}   {"any": [cond, ...]}   {"not": cond}
-    """
-    if cond is None:
-        return True
-    if "all" in cond:
-        return all(evaluar(c, respuestas) for c in cond["all"])
-    if "any" in cond:
-        return any(evaluar(c, respuestas) for c in cond["any"])
-    if "not" in cond:
-        return not evaluar(cond["not"], respuestas)
-    valor = respuestas.get(cond["q"])
-    valores = valor if isinstance(valor, list) else ([] if valor in (None, "") else [valor])
-    if "eq" in cond:
-        return cond["eq"] in valores
-    if "in" in cond:
-        return any(v in cond["in"] for v in valores)
-    if "answered" in cond:
-        return bool(valores) == cond["answered"]
-    raise ValueError(f"Condición desconocida: {cond}")
-
 
 def referencias(cond):
     """Pares (codigo, [valores]) que usa una condición."""

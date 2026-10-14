@@ -14,7 +14,7 @@ SELECT_VERSION = """
         tss_questions (
             id, code, prompt, help_text, question_type, required, position,
             configuration, display_condition,
-            tss_question_options ( value, label, position )
+            tss_question_options ( id, value, label, position )
         )
     )
 """
@@ -54,6 +54,7 @@ def armar_encuesta(encuesta, version):
             "questions": preguntas,
         })
     return {
+        "survey_id": encuesta["id"],
         "slug": encuesta["slug"],
         "name": encuesta["name"],
         "description": encuesta["description"],
@@ -65,16 +66,28 @@ def armar_encuesta(encuesta, version):
     }
 
 
-@router.get("/{slug}")
-def obtener_encuesta(slug: str):
+class EncuestaNoEncontrada(Exception):
+    pass
+
+
+def cargar_encuesta(slug):
+    """Encuesta armada con su versión vigente. Lanza EncuestaNoEncontrada."""
     filas = supabase.table("tss_surveys").select("*").eq("slug", slug).limit(1).execute().data
     if not filas:
-        raise HTTPException(404, f"No existe la encuesta '{slug}'")
+        raise EncuestaNoEncontrada(f"No existe la encuesta '{slug}'")
     encuesta = filas[0]
 
     versiones = (supabase.table("tss_survey_versions").select(SELECT_VERSION)
                  .eq("survey_id", encuesta["id"]).execute().data)
     version = elegir_version(versiones)
     if version is None:
-        raise HTTPException(404, f"La encuesta '{slug}' no tiene versiones")
+        raise EncuestaNoEncontrada(f"La encuesta '{slug}' no tiene versiones")
     return armar_encuesta(encuesta, version)
+
+
+@router.get("/{slug}")
+def obtener_encuesta(slug: str):
+    try:
+        return cargar_encuesta(slug)
+    except EncuestaNoEncontrada as e:
+        raise HTTPException(404, str(e))

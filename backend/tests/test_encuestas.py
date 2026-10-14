@@ -15,7 +15,7 @@ def pregunta(code, position, opciones=(), configuration=None):
     }
 
 
-ENCUESTA = {"slug": "titulados", "name": "Titulados", "description": "d", "is_active": False}
+ENCUESTA = {"id": "e1", "slug": "titulados", "name": "Titulados", "description": "d", "is_active": False}
 
 
 def test_elegir_version_prefiere_la_ultima_publicada():
