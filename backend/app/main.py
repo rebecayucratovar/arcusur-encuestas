@@ -2,10 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from postgrest.exceptions import APIError
 
-from app import encuestas, respuestas
+from app import auth, encuestas, respuestas
 from app.db import supabase
 
 app = FastAPI(title="arcusur-encuestas")
+app.include_router(auth.router)
 app.include_router(encuestas.router)
 app.include_router(respuestas.router)
 

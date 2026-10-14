@@ -172,3 +172,21 @@ textarea.campo { resize: vertical; }
   .matriz__celda--activa { border-color: var(--rojo); background: var(--rojo-suave); }
   .matriz__etiqueta { position: static; width: auto; height: auto; clip-path: none; white-space: normal; }
 }
+
+/* ---------- login ---------- */
+.login { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 16px; }
+.login__tarjeta { width: 100%; max-width: 384px; padding: 32px; border-radius: var(--radio); background: var(--blanco); box-shadow: var(--sombra); }
+.login__marca { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 28px; text-align: center; }
+.login__marca h1 { margin-top: 8px; color: var(--marino); font-size: 20px; font-weight: 700; }
+.login__marca p { color: var(--texto-suave); font-size: 14px; }
+.login__etiqueta { display: block; margin-top: 16px; color: var(--texto); font-size: 14px; font-weight: 500; }
+.login__etiqueta + .campo, .login__clave .campo { margin-top: 8px; }
+.login__clave { position: relative; }
+.login__clave .campo { padding-right: 44px; }
+.login__ojo { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 6px; background: none; color: var(--texto-suave); cursor: pointer; }
+.login__ojo:hover { color: var(--marino); background: var(--fondo); }
+.login__boton { width: 100%; margin-top: 20px; }
+.login__volver { align-self: center; }
+.login__tarjeta .pregunta__error { margin-top: 12px; }
+.estado__cargando { color: var(--texto-suave); }
+.estado__accion { margin-top: 24px; }

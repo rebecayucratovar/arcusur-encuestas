@@ -62,3 +62,20 @@ export const IconoCheck = () => (
     <path d="m8 12 3 3 5-6" />
   </Icono>
 )
+
+export const IconoOjo = ({ tachado }: { tachado?: boolean }) => (
+  <Icono size={18}>
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+    {tachado && <path d="M3 3l18 18" />}
+  </Icono>
+)
+
+export const EscudoUMSS = () => (
+  <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
+    <path d="M22 1 2 8v16c0 13 9 22 20 27 11-5 20-14 20-27V8L22 1Z" fill="#b0122d" />
+    <path d="M22 6 7 11.5v12.5c0 10 6.5 17 15 21 8.5-4 15-11 15-21V11.5L22 6Z" fill="#14213d" />
+    <text x="22" y="28" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700"
+      fontFamily="Inter, sans-serif">UMSS</text>
+  </svg>
+)
