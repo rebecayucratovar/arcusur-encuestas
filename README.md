@@ -25,9 +25,9 @@ cd arcusur-encuestas
 ### 2. Backend
 ```powershell
 cd backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1      # Windows (PowerShell)
-# source venv/bin/activate       # Linux / macOS
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1     # Windows (PowerShell)
+# source .venv/bin/activate       # Linux / macOS
 pip install -r requirements.txt
 copy .env.example .env           # luego completar SUPABASE_URL y SUPABASE_KEY
 uvicorn app.main:app --reload
@@ -44,6 +44,22 @@ npm install
 npm run dev
 ```
 La aplicación queda en http://localhost:5173.
+
+## Uso diario
+Los pasos de instalación se hacen una sola vez. Para trabajar:
+
+```powershell
+# Terminal 1 - backend
+cd backend
+.\.venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload
+
+# Terminal 2 - frontend
+cd frontend
+npm run dev
+```
+
+Después de un `git pull`, si cambió `backend/requirements.txt` ejecutar `pip install -r requirements.txt` (con el venv activado), y si cambió `frontend/package.json` ejecutar `npm install`.
 
 ## Agregar dependencias de Python
 Con el entorno virtual activado y dentro de `backend/`:

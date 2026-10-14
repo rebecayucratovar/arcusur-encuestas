@@ -1,0 +1,114 @@
+{
+  "survey": "empleadores",
+  "version": 1,
+  "source": "encuesta.pdf (capturas del formulario Google Forms)",
+  "sections": [
+    {
+      "title": "Información de la organización",
+      "questions": [
+        {"code": "correo", "type": "email", "required": true,
+         "prompt": "Correo",
+         "config": {"store": "contact", "contact_field": "email"}},
+        {"code": "nombre_empresa", "type": "short_text", "required": true,
+         "prompt": "1) Nombre de la Empresa o Institución"},
+        {"code": "tipo_organizacion", "type": "single_choice", "required": true,
+         "prompt": "2) Tipo de organización",
+         "options": [["publico", "Público"], ["privado", "Privado"]]},
+        {"code": "tamano_organizacion", "type": "single_choice", "required": true,
+         "prompt": "3) Tamaño de la organización",
+         "options": [["grande", "Grande (100 funcionarios o más)"], ["mediana", "Mediana (entre 31 a 99 funcionarios)"], ["pequena", "Pequeña (entre 11 a 30 funcionarios)"], ["micro", "Micro (hasta 10 funcionarios)"]]},
+        {"code": "rubro", "type": "single_choice", "required": true,
+         "prompt": "4) Indique el rubro o sector principal de la organización en la que se desempeña laboralmente el profesional titulado de la Carrera de Ingeniería de Sistemas.",
+         "options": [["desarrollo_software", "Desarrollo de software"], ["servicios_ti", "Servicios de tecnologías de información (TI)"], ["telecomunicaciones", "Telecomunicaciones y redes"], ["soporte_tecnico", "Soporte técnico y mantenimiento de sistemas"], ["consultoria", "Consultoría en sistemas / transformación digital"], ["banca", "Banca y servicios financieros"], ["sector_publico", "Instituciones públicas / gobierno"], ["educacion", "Educación e investigación"], ["industria", "Industria y manufactura"], ["comercio", "Comercio y comercio electrónico"], ["salud", "Salud"], ["ciberseguridad", "Seguridad informática / ciberseguridad"], ["datos_bi", "Análisis de datos / inteligencia de negocios"], ["startups", "Startups o emprendimientos tecnológicos"], ["otros", "Otros"]]}
+      ]
+    },
+    {
+      "title": "EMPLEABILIDAD",
+      "description": "Se busca conocer la demanda laboral, oportunidades de contratación y desempeño de los profesionales titulados de Ingeniería de Sistemas en las organizaciones, con el fin de evaluar la pertinencia de la formación profesional frente a las necesidades del entorno laboral.",
+      "questions": [
+        {"code": "contrataciones_cinco_anios", "type": "single_choice", "required": true,
+         "prompt": "5) ¿La organización ha contratado Ingenieros de la carrera de Sistemas en los últimos 5 años?",
+         "options": [["si", "SI"], ["no", "No"]]},
+        {"code": "probabilidad_contratar", "type": "single_choice", "required": true,
+         "prompt": "6) Considerando las necesidades actuales y proyectadas de la organización, ¿existe la posibilidad de incorporar Ingenieros de Sistemas en su equipo de trabajo durante los próximos años?",
+         "options": [["alta", "Sí, existe una alta probabilidad de contratación"], ["depende_crecimiento", "Sí, dependiendo del crecimiento o nuevos proyectos de la organización"], ["no_prevista", "No se tiene prevista la contratación actualmente"], ["no_requiere", "No requiere profesionales del área de Sistemas"]]},
+        {"code": "nivel_formacion", "type": "single_choice", "required": true,
+         "prompt": "7) ¿Qué nivel de formación académica o actualización profesional, demanda su organización para contratar nuevos profesionales del área?",
+         "options": [["licenciatura", "Licenciatura"], ["diplomado", "Diplomado"], ["especialidad", "Especialidad"], ["maestria", "Maestría"], ["doctorado", "Doctorado"], ["posdoctorado", "Post- doctorado"]]},
+        {"code": "medio_convocatoria", "type": "single_choice", "required": true,
+         "prompt": "8) ¿A través de qué medio convoca a profesionales en su organización (empresa o institución)?",
+         "options": [["medios_escritos", "Medios escritos y audiovisuales"], ["internet", "Internet y Redes sociales"], ["postulacion", "Postulación competitiva (convocatorias públicas y privadas)"], ["oferta_personal", "Oferta profesional personal"], ["recomendacion", "Recomendación de terceros"], ["otros", "Otros"]],
+         "note": "Obligatoria según la captura del formulario (el anexo de la guía no tiene asterisco)."},
+        {"code": "cargos", "type": "multiple_choice", "required": true,
+         "prompt": "9) ¿Qué tipo de cargos desempeñan los profesionales titulados de la Carrera de Ingeniería de Sistemas en su organización?",
+         "help": "(Puede seleccionar más de una opción)",
+         "config": {"min_selected": 1, "other_question": "otro_cargo"},
+         "options": [["apoyo", "De apoyo / asistencia tecnológica"], ["tecnico", "Técnico (desarrollo de software, administración de sistemas, redes, bases de datos, soporte TI)"], ["analista", "Analista (sistemas, datos, procesos o soluciones tecnológicas)"], ["especialista", "Especialista (ciberseguridad, arquitectura de software, infraestructura tecnológica, entre otros)"], ["supervisor", "Supervisor / Coordinador de área tecnológica"], ["jefatura", "Jefatura o Gerencial (gestión de proyectos, dirección de TI, transformación digital)"], ["consultor", "Consultor tecnológico"]]},
+        {"code": "otro_cargo", "type": "short_text", "required": false,
+         "prompt": "Otro:",
+         "config": {"other_for": "cargos"}},
+        {"code": "nuevas_areas", "type": "long_text", "required": true,
+         "prompt": "10) Desde su experiencia en el sector laboral, ¿qué nuevas áreas de conocimiento, tecnologías o tendencias emergentes considera importantes para la formación del profesional de Ingeniería de Sistemas?"},
+        {"code": "nuevas_herramientas", "type": "long_text", "required": true,
+         "prompt": "11) ¿Cuáles son las nuevas herramientas tecnológicas (software, plataformas o entornos de desarrollo) que, a su criterio, debería conocer y manejar el profesional titulado de la Carrera de Ingeniería de Sistemas?"},
+        {"code": "competencias", "type": "long_text", "required": true,
+         "prompt": "12) Desde su experiencia en el ámbito laboral, ¿qué habilidades, competencias y destrezas considera fundamentales que debe desarrollar el profesional de Ingeniería de Sistemas para responder adecuadamente a las necesidades de la organización y del mercado laboral?"}
+      ]
+    },
+    {
+      "title": "FORMACIÓN Y PERFIL PROFESIONAL",
+      "description": "Se busca conocer la valoración de los empleadores sobre la formación, competencias y desempeño profesional de los titulados de Ingeniería de Sistemas, con el propósito de fortalecer la calidad académica y adecuar el perfil profesional a las necesidades del mercado laboral.",
+      "questions": [
+        {"code": "perfil_01", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "La Carrera de Ingeniería de Sistemas de la Universidad Mayor de San Simón brinda confianza a nuestra organización como formadora de profesionales del área tecnológica."},
+        {"code": "perfil_02", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Considero que el título profesional otorgado por la Carrera de Ingeniería de Sistemas es consistente con el nivel de formación y las competencias demostradas por sus titulados."},
+        {"code": "perfil_03", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Las autoridades de la Carrera de Ingeniería de Sistemas consultan regularmente nuestra opinión como empleadores respecto al perfil profesional y las competencias requeridas en el ámbito laboral."},
+        {"code": "perfil_04", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Conozco el perfil profesional y las competencias de egreso declaradas por la Carrera de Ingeniería de Sistemas."},
+        {"code": "perfil_05", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "El perfil profesional declarado por la Carrera de Ingeniería de Sistemas es coherente con el desempeño laboral demostrado por sus titulados."},
+        {"code": "perfil_06", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "La formación proporcionada por la Carrera de Ingeniería de Sistemas permite a sus titulados alcanzar un desempeño destacado tanto en el ámbito profesional como en su formación integral."},
+        {"code": "perfil_07", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "La Carrera de Ingeniería de Sistemas considera nuestra opinión como empleadores e incorpora las necesidades del sector laboral en la definición y mejora de actividades de formación práctica, pasantías y modalidades de titulación."},
+        {"code": "perfil_08", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "El desempeño profesional de los titulados de Ingeniería de Sistemas evidencia el desarrollo de competencias laborales como: comunicación efectiva, análisis y resolución de problemas, pensamiento crítico, aprendizaje continuo, trabajo en equipo, iniciativa personal y manejo adecuado de tecnologías de información."},
+        {"code": "perfil_09", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Los profesionales titulados de Ingeniería de Sistemas demuestran valores y actitudes relacionados con la ética profesional, responsabilidad social, inclusión, diversidad, respeto a los derechos humanos y compromiso con el medio ambiente."},
+        {"code": "perfil_10", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "He participado en procesos de recopilación de información, evaluación o retroalimentación relacionados con el desempeño laboral de los titulados de la Carrera de Ingeniería de Sistemas."}
+      ]
+    },
+    {
+      "title": "RELACIÓN DE LA CARRERA CON LA ORGANIZACIÓN",
+      "description": "Esta sección tiene como objetivo conocer la relación entre la Carrera de Ingeniería de Sistemas y las organizaciones del sector laboral, así como su participación en actividades de vinculación y retroalimentación.",
+      "questions": [
+        {"code": "relacion_01", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "La Carrera de Ingeniería de Sistemas mantiene vínculos con organizaciones e instituciones que generan oportunidades laborales para sus titulados."},
+        {"code": "relacion_02", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "He participado en actividades de vinculación con el entorno laboral y tecnológico organizadas por la Carrera de Ingeniería de Sistemas o la Facultad de Ciencias y Tecnología."},
+        {"code": "relacion_03", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "He participado en actividades de difusión de oportunidades laborales, convocatorias, pasantías o prácticas profesionales organizadas por la Carrera de Ingeniería de Sistemas."},
+        {"code": "relacion_04", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "He participado en actividades de vinculación entre profesionales del sector tecnológico, empleadores, docentes y estudiantes de la Carrera de Ingeniería de Sistemas para el intercambio de conocimientos, experiencias y desarrollo de trabajos conjuntos."},
+        {"code": "relacion_05", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Como empleador, he sido consultado sobre el desempeño profesional de los titulados de Ingeniería de Sistemas, con el propósito de retroalimentar el perfil profesional y el plan de estudios de la Carrera."},
+        {"code": "relacion_06", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Como empleador, la Carrera de Ingeniería de Sistemas ha consultado nuestra opinión respecto a la pertinencia de la formación impartida y su correspondencia con las necesidades del sector tecnológico y laboral."},
+        {"code": "relacion_07", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "Cuando nuestra organización requiere profesionales del área de Sistemas, recurrimos a la Universidad Mayor de San Simón y a la Carrera de Ingeniería de Sistemas como fuente de búsqueda de talento profesional."},
+        {"code": "relacion_08", "type": "likert", "required": true, "options": "@acuerdo_emp",
+         "prompt": "He sido consultado periódicamente por la Carrera de Ingeniería de Sistemas durante sus procesos de autoevaluación y mejora continua.",
+         "note": "Último ítem visible en las capturas; confirmar si la sección tiene más ítems o termina en Enviar."}
+      ]
+    }
+  ],
+  "shared_options": {
+    "acuerdo_emp": [["totalmente_acuerdo", "Totalmente de acuerdo"], ["parcialmente_acuerdo", "Parcialmente de acuerdo"], ["totalmente_desacuerdo", "Totalmente desacuerdo"], ["no_sabe", "No sabe"]]
+  },
+  "shared_scores": {
+    "acuerdo_emp": {"totalmente_acuerdo": 3, "parcialmente_acuerdo": 2, "totalmente_desacuerdo": 1}
+  }
+}
