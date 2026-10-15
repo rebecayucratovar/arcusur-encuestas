@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import MatrizLikert from '../components/encuesta/MatrizLikert'
 import Pregunta from '../components/encuesta/Pregunta'
+import NavbarPublica from '../components/NavbarPublica'
 import { IconoCheck, IconoFlechaIzq } from '../components/Iconos'
 import { esVisible, respuestasVisibles, validar } from '../lib/validacion'
 import { enviarRespuestas, ErrorValidacion, obtenerEncuesta } from '../services/api'
@@ -201,6 +202,7 @@ export default function Encuesta({ slug }: { slug: string }) {
 
   return (
     <div className="encuesta">
+      <NavbarPublica />
       <header className="encuesta__cabecera">
         <div className="encuesta__contenedor">
           <Link to="/" className="encuesta__volver"><IconoFlechaIzq /> Volver al inicio</Link>

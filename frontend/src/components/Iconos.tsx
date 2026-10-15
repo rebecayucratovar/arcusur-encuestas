@@ -79,3 +79,31 @@ export const EscudoUMSS = () => (
       fontFamily="Inter, sans-serif">UMSS</text>
   </svg>
 )
+
+export const IconoResumen = () => (
+  <Icono size={18}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></Icono>
+)
+export const IconoTabla = () => (
+  <Icono size={18}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 4v16" /></Icono>
+)
+export const IconoDatos = () => (
+  <Icono size={18}><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" /></Icono>
+)
+export const IconoGrafico = () => (
+  <Icono size={18}><path d="M3 3v18h18M8 17v-5M12 17V8M16 17v-8M20 17v-3" /></Icono>
+)
+export const IconoEscenarios = () => (
+  <Icono size={18}><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></Icono>
+)
+export const IconoComparar = () => (
+  <Icono size={18}><circle cx="6" cy="6" r="3" /><circle cx="18" cy="18" r="3" /><path d="M13 6h3a2 2 0 0 1 2 2v7M11 18H8a2 2 0 0 1-2-2V9" /></Icono>
+)
+export const IconoExterno = () => (
+  <Icono size={16}><path d="M14 4h6v6M20 4 10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></Icono>
+)
+export const IconoSalir = () => (
+  <Icono size={16}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3" /></Icono>
+)
+export const IconoInfo = () => (
+  <Icono size={18}><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></Icono>
+)

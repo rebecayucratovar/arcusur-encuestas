@@ -1,36 +1,22 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import AdminLayout from './components/admin/AdminLayout'
+import SeccionPendiente from './components/admin/SeccionPendiente'
 import { IconoFlechaIzq } from './components/Iconos'
 import RutaAdmin from './components/RutaAdmin'
 import SesionProvider from './components/SesionProvider'
-import { useSesion } from './lib/sesion'
+import Dashboard from './pages/Dashboard'
 import EncuestaEmpleadores from './pages/EncuestaEmpleadores'
 import EncuestaTitulados from './pages/EncuestaTitulados'
 import Inicio from './pages/Inicio'
 import Login from './pages/Login'
 
-function Pendiente({ titulo, texto }: { titulo: string; texto: string }) {
+function NoEncontrada() {
   return (
     <main className="estado">
       <div className="estado__tarjeta">
-        <h1>{titulo}</h1>
-        <p>{texto}</p>
+        <h1>Página no encontrada</h1>
+        <p>La dirección no existe.</p>
         <Link to="/" className="enlace"><IconoFlechaIzq /> Volver al inicio</Link>
-      </div>
-    </main>
-  )
-}
-
-// Provisional: P3 reemplaza esta página por el panel de análisis.
-function PanelProvisional() {
-  const { admin, cerrarSesion } = useSesion()
-  return (
-    <main className="estado">
-      <div className="estado__tarjeta">
-        <h1>Panel del Comité</h1>
-        <p>Sesión iniciada como <strong>{admin?.email}</strong>. El panel de análisis está en desarrollo.</p>
-        <button type="button" className="boton boton--secundario estado__accion" onClick={cerrarSesion}>
-          Cerrar sesión
-        </button>
       </div>
     </main>
   )
@@ -45,8 +31,23 @@ export default function App() {
           <Route path="/encuestas/titulados" element={<EncuestaTitulados />} />
           <Route path="/encuestas/empleadores" element={<EncuestaEmpleadores />} />
           <Route path="/admin/login" element={<Login />} />
-          <Route path="/admin" element={<RutaAdmin><PanelProvisional /></RutaAdmin>} />
-          <Route path="*" element={<Pendiente titulo="Página no encontrada" texto="La dirección no existe." />} />
+
+          {/* Panel del Comité: P2 (Datos: importar/exportar) y P3 (Resumen, Análisis, Escenarios...). */}
+          <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
+            <Route index element={<Dashboard />} />
+            <Route path="respuestas" element={
+              <SeccionPendiente titulo="Respuestas" descripcion="Listado de envíos recibidos por formulario e importación." />} />
+            <Route path="datos" element={
+              <SeccionPendiente titulo="Datos" descripcion="Importación de CSV/Excel y exportación de resultados." />} />
+            <Route path="analisis" element={
+              <SeccionPendiente titulo="Análisis" descripcion="Estadística descriptiva, tablas cruzadas y pruebas χ²." />} />
+            <Route path="escenarios" element={
+              <SeccionPendiente titulo="Escenarios" descripcion="Simulación de escenarios para la toma de decisiones." />} />
+            <Route path="comparacion" element={
+              <SeccionPendiente titulo="Empleadores vs. Titulados" descripcion="Contraste entre la percepción de empleadores y titulados." />} />
+          </Route>
+
+          <Route path="*" element={<NoEncontrada />} />
         </Routes>
       </BrowserRouter>
     </SesionProvider>

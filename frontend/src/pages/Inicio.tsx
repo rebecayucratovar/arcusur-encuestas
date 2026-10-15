@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import NavbarPublica from '../components/NavbarPublica'
 import { IconoBirrete, IconoCandado, IconoEdificio, IconoEscudo, IconoFlecha, IconoReloj } from '../components/Iconos'
 
 function TarjetaEncuesta({ to, icono, minutos, titulo, texto }: {
@@ -21,6 +22,7 @@ function TarjetaEncuesta({ to, icono, minutos, titulo, texto }: {
 export default function Inicio() {
   return (
     <div className="inicio">
+      <NavbarPublica />
       <main className="inicio__contenido">
         <p className="inicio__antetitulo">Autoevaluación con miras a la acreditación ARCUSUR · Gestión 2026</p>
         <h1>Encuestas de Autoevaluación · Ingeniería en Sistemas</h1>
