@@ -71,15 +71,6 @@ export const IconoOjo = ({ tachado }: { tachado?: boolean }) => (
   </Icono>
 )
 
-export const EscudoUMSS = () => (
-  <svg width="44" height="52" viewBox="0 0 44 52" aria-hidden="true">
-    <path d="M22 1 2 8v16c0 13 9 22 20 27 11-5 20-14 20-27V8L22 1Z" fill="#b0122d" />
-    <path d="M22 6 7 11.5v12.5c0 10 6.5 17 15 21 8.5-4 15-11 15-21V11.5L22 6Z" fill="#14213d" />
-    <text x="22" y="28" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700"
-      fontFamily="Inter, sans-serif">UMSS</text>
-  </svg>
-)
-
 export const IconoResumen = () => (
   <Icono size={18}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></Icono>
 )

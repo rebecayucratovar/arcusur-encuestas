@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import type { ContextoAdmin, Resumen, SlugEncuesta } from '../../lib/admin'
+import logoUmss from '../../assets/logo-umss.png'
 import { useSesion } from '../../lib/sesion'
 import { fetchAdmin } from '../../services/api'
 import {
-  EscudoUMSS, IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoResumen,
+  IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoResumen,
   IconoSalir, IconoTabla,
 } from '../Iconos'
 
@@ -48,10 +49,12 @@ export default function AdminLayout() {
     <div className="admin">
       <aside className="admin__lateral">
         <div className="admin__marca">
-          <EscudoUMSS />
+          <span className="admin__logo">
+            <img src={logoUmss} alt="Universidad Mayor de San Simón" />
+          </span>
           <div>
             <strong>Autoevaluación ARCUSUR</strong>
-            <span>Ing. de Sistemas · UMSS</span>
+            <span>Ingeniería de Sistemas</span>
           </div>
         </div>
         <nav className="admin__menu" aria-label="Secciones del panel">

@@ -207,8 +207,9 @@ textarea.campo { resize: vertical; }
 /* ---------- panel del Comité ---------- */
 .admin { display: flex; min-height: 100vh; }
 .admin__lateral { position: sticky; top: 0; height: 100vh; width: 248px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--marino); color: rgba(255, 255, 255, 0.85); }
-.admin__marca { display: flex; align-items: center; gap: 12px; padding: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-.admin__marca svg { width: 34px; height: 40px; flex-shrink: 0; }
+.admin__marca { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.admin__logo { display: block; padding: 10px 12px; border-radius: 10px; background: var(--blanco); }
+.admin__logo img { display: block; width: 100%; height: auto; }
 .admin__marca strong { display: block; color: var(--blanco); font-size: 15px; line-height: 1.25; }
 .admin__marca span { font-size: 13px; color: rgba(255, 255, 255, 0.65); }
 .admin__menu { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; flex: 1; }
@@ -274,3 +275,4 @@ textarea.campo { resize: vertical; }
   .graficos { grid-template-columns: 1fr; }
   .grafico--ancho { grid-column: span 1; }
 }
+.login__logo { display: block; width: 220px; max-width: 100%; height: auto; margin-bottom: 8px; }

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { EscudoUMSS, IconoFlechaIzq, IconoOjo } from '../components/Iconos'
+import logoUmss from '../assets/logo-umss.png'
+import { IconoFlechaIzq, IconoOjo } from '../components/Iconos'
 import { useSesion } from '../lib/sesion'
 
 export default function Login() {
@@ -34,7 +35,7 @@ export default function Login() {
     <main className="login">
       <form className="login__tarjeta" onSubmit={enviar} noValidate>
         <div className="login__marca">
-          <EscudoUMSS />
+          <img src={logoUmss} alt="Universidad Mayor de San Simón" className="login__logo" />
           <h1>Comité de Evaluación</h1>
           <p>Sistema de encuestas y análisis · ARCUSUR</p>
         </div>
