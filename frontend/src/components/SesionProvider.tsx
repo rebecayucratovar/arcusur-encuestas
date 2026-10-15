@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { SesionContext, type Admin } from '../lib/sesion'
-import { supabase } from '../lib/supabase'
+import { errorConfiguracion, supabase } from '../lib/supabase'
 import { obtenerAdmin } from '../services/api'
 
 export default function SesionProvider({ children }: { children: ReactNode }) {
@@ -33,8 +33,13 @@ export default function SesionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const iniciarSesion = useCallback(async (email: string, clave: string) => {
+    if (errorConfiguracion) throw new Error(errorConfiguracion)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: clave })
-    if (error || !data.session) throw new Error('Correo o contraseña incorrectos.')
+    if (error?.code === 'invalid_credentials') throw new Error('Correo o contraseña incorrectos.')
+    if (error?.code === 'email_not_confirmed') throw new Error('La cuenta aún no fue confirmada.')
+    if (error || !data.session) {
+      throw new Error(`No se pudo conectar con Supabase${error ? `: ${error.message}` : '.'}`)
+    }
     try {
       const a = await obtenerAdmin(data.session.access_token)
       setAdmin(a)
