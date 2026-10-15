@@ -5,8 +5,8 @@ import logoUmss from '../../assets/logo-umss.png'
 import { useSesion } from '../../lib/sesion'
 import { fetchAdmin } from '../../services/api'
 import {
-  IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoResumen,
-  IconoSalir, IconoTabla,
+  IconoCerrar, IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoMenu,
+  IconoResumen, IconoSalir, IconoTabla,
 } from '../Iconos'
 
 const MENU: { to: string; texto: string; icono: ReactNode }[] = [
@@ -33,6 +33,20 @@ export default function AdminLayout() {
   const [encuesta, setEncuesta] = useState<SlugEncuesta>('titulados')
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // Menú lateral en celular (en escritorio siempre está visible).
+  const [lateralAbierto, setLateralAbierto] = useState(false)
+  const cerrarLateral = () => setLateralAbierto(false)
+
+  useEffect(() => {
+    if (!lateralAbierto) return
+    const alPresionar = (e: KeyboardEvent) => e.key === 'Escape' && setLateralAbierto(false)
+    document.addEventListener('keydown', alPresionar)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', alPresionar)
+      document.body.style.overflow = ''
+    }
+  }, [lateralAbierto])
 
   useEffect(() => {
     if (!token) return
@@ -47,7 +61,11 @@ export default function AdminLayout() {
 
   return (
     <div className="admin">
-      <aside className="admin__lateral">
+      {lateralAbierto && <div className="admin__fondo" onClick={cerrarLateral} aria-hidden="true" />}
+      <aside id="menu-lateral" className={`admin__lateral${lateralAbierto ? ' admin__lateral--abierto' : ''}`}>
+        <button type="button" className="admin__cerrar" onClick={cerrarLateral} aria-label="Cerrar menú">
+          <IconoCerrar />
+        </button>
         <div className="admin__marca">
           <span className="admin__logo">
             <img src={logoUmss} alt="Universidad Mayor de San Simón" />
@@ -59,7 +77,7 @@ export default function AdminLayout() {
         </div>
         <nav className="admin__menu" aria-label="Secciones del panel">
           {MENU.map((m) => (
-            <NavLink key={m.to} to={m.to} end={m.to === '/admin'}
+            <NavLink key={m.to} to={m.to} end={m.to === '/admin'} onClick={cerrarLateral}
               className={({ isActive }) => `admin__enlace${isActive ? ' admin__enlace--activo' : ''}`}>
               {m.icono}<span>{m.texto}</span>
             </NavLink>
@@ -70,6 +88,10 @@ export default function AdminLayout() {
 
       <div className="admin__principal">
         <header className="admin__barra">
+          <button type="button" className="admin__hamburguesa" onClick={() => setLateralAbierto(true)}
+            aria-label="Abrir menú" aria-controls="menu-lateral" aria-expanded={lateralAbierto}>
+            <IconoMenu />
+          </button>
           <div className="admin__filtros">
             <span className="admin__rotulo">Encuesta</span>
             <div className="selector" role="tablist" aria-label="Encuesta">

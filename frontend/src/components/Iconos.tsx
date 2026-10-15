@@ -98,3 +98,9 @@ export const IconoSalir = () => (
 export const IconoInfo = () => (
   <Icono size={18}><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></Icono>
 )
+export const IconoMenu = () => (
+  <Icono size={22}><path d="M4 6h16M4 12h16M4 18h16" /></Icono>
+)
+export const IconoCerrar = () => (
+  <Icono size={20}><path d="M6 6l12 12M18 6 6 18" /></Icono>
+)

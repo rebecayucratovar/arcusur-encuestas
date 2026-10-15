@@ -264,15 +264,34 @@ textarea.campo { resize: vertical; }
 .grafico p { margin-top: 2px; color: var(--texto-suave); font-size: 13px; }
 .grafico__vacio { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 200px; margin-top: 16px; border: 1px dashed var(--borde); border-radius: 10px; color: var(--texto-suave); font-size: 14px; }
 
+.admin__hamburguesa, .admin__cerrar, .admin__fondo { display: none; }
+
 @media (max-width: 960px) {
-  .admin { flex-direction: column; }
-  .admin__lateral { position: static; width: 100%; height: auto; }
-  .admin__menu { flex-direction: row; overflow-x: auto; padding: 8px 12px; }
-  .admin__enlace { white-space: nowrap; }
-  .admin__publicas { display: none; }
-  .admin__barra { position: static; padding: 12px 16px; }
+  /* El menú lateral pasa a ser un panel que se abre desde la izquierda. */
+  .admin__lateral {
+    position: fixed; z-index: 30; left: 0; top: 0; width: min(280px, 85vw); height: 100vh; height: 100dvh;
+    transform: translateX(-100%); transition: transform 0.25s ease; overflow-y: auto;
+  }
+  .admin__lateral--abierto { transform: translateX(0); box-shadow: 8px 0 24px rgba(0, 0, 0, 0.25); }
+  .admin__fondo { display: block; position: fixed; inset: 0; z-index: 25; background: rgba(20, 33, 61, 0.5); }
+  .admin__cerrar {
+    display: grid; place-items: center; position: absolute; top: 10px; right: 10px; z-index: 1;
+    width: 34px; height: 34px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: var(--blanco); cursor: pointer;
+  }
+  .admin__marca { padding-top: 52px; }
+  .admin__hamburguesa {
+    display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--borde); border-radius: 8px;
+    background: var(--blanco); color: var(--marino); cursor: pointer;
+  }
+  .admin__barra { padding: 10px 16px; }
+  .admin__filtros { order: 3; width: 100%; }
+  .usuario__texto { display: none; }
   .admin__contenido { padding: 20px 16px; }
   .graficos { grid-template-columns: 1fr; }
   .grafico--ancho { grid-column: span 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin__lateral { transition: none; }
 }
 .login__logo { display: block; width: 220px; max-width: 100%; height: auto; margin-bottom: 8px; }
