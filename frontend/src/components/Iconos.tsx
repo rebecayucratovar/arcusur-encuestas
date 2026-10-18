@@ -104,3 +104,12 @@ export const IconoMenu = () => (
 export const IconoCerrar = () => (
   <Icono size={20}><path d="M6 6l12 12M18 6 6 18" /></Icono>
 )
+export const IconoAlerta = () => (
+  <Icono size={18}><path d="M12 3 2 20h20L12 3Z" /><path d="M12 10v4M12 17h.01" /></Icono>
+)
+export const IconoDescargar = () => (
+  <Icono size={15}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></Icono>
+)
+export const IconoIdea = () => (
+  <Icono size={16}><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3Z" /></Icono>
+)
