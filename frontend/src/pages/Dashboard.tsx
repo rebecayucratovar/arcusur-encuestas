@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Barras, Columnas, Dona, TablaDatos } from '../components/graficos/Graficos'
-import { IconoAlerta, IconoDescargar, IconoIdea, IconoTabla } from '../components/Iconos'
+import { IconoDescargar, IconoIdea, IconoTabla } from '../components/Iconos'
 import { useContextoAdmin, type SlugEncuesta } from '../lib/admin'
 import { exportarCSV } from '../lib/exportar'
-import { DATOS_DE_DEMOSTRACION, FILTROS, resumenDemo, type Grafico } from '../lib/resumen'
+import { FILTROS, resumenDemo, type Grafico } from '../lib/resumen'
 
 // Por ahora el Resumen usa datos ficticios. Para conectarlo a la base de datos,
 // reemplazar `resumenDemo(...)` por una llamada a GET /admin/resumen/{slug}
@@ -96,17 +95,6 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
 
 export default function Dashboard() {
   const { encuesta } = useContextoAdmin()
-  return (
-    <>
-      {DATOS_DE_DEMOSTRACION && (
-        <div className="aviso-demo" role="note">
-          <IconoAlerta />
-          <p><strong>Estás viendo datos de demostración.</strong> Las cifras son ficticias y no representan a titulados ni empleadores reales.</p>
-          <Link to="/admin/datos">Gestionar datos</Link>
-        </div>
-      )}
-      {/* key: al cambiar de encuesta se reinician los filtros. */}
-      <Resumen key={encuesta} encuesta={encuesta} />
-    </>
-  )
+  // key: al cambiar de encuesta se reinician los filtros.
+  return <Resumen key={encuesta} encuesta={encuesta} />
 }

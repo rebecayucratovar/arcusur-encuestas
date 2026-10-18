@@ -6,7 +6,7 @@ import { DATOS_DE_DEMOSTRACION, totalDemo } from '../../lib/resumen'
 import { useSesion } from '../../lib/sesion'
 import { fetchAdmin } from '../../services/api'
 import {
-  IconoCerrar, IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoMenu,
+  IconoAlerta, IconoCerrar, IconoComparar, IconoDatos, IconoEscenarios, IconoExterno, IconoGrafico, IconoMenu,
   IconoResumen, IconoSalir, IconoTabla,
 } from '../Iconos'
 
@@ -130,6 +130,14 @@ export default function AdminLayout() {
             )}
           </div>
         </header>
+
+        {DATOS_DE_DEMOSTRACION && (
+          <div className="aviso-demo" role="note">
+            <IconoAlerta />
+            <p><strong>Estás viendo datos de demostración.</strong> Las cifras son ficticias y no representan a titulados ni empleadores reales.</p>
+            <Link to="/admin/datos" onClick={cerrarLateral}>Gestionar datos</Link>
+          </div>
+        )}
 
         <main className="admin__contenido">
           <Outlet context={{ encuesta, resumen } satisfies ContextoAdmin} />

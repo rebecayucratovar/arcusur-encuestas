@@ -75,7 +75,7 @@ const lider = (datos: Categoria[]) => [...datos].sort((a, b) => b.valor - a.valo
 
 // ---------------------------------------------------------------- generador ficticio
 
-type Fila = Record<string, string | number | undefined>
+export type Fila = Record<string, string | number | undefined>
 
 /** Generador pseudoaleatorio con semilla: los datos de demo son siempre los mismos. */
 function aleatorio(semilla: number) {
@@ -138,10 +138,35 @@ function generarEmpleadores(n: number): Fila[] {
   }))
 }
 
-const DEMO: Record<SlugEncuesta, Fila[]> = {
-  titulados: generarTitulados(186),
-  empleadores: generarEmpleadores(53),
+// Nombres inventados: los datos de demostración no deben atribuirse a organizaciones reales.
+const ORGANIZACIONES_FICTICIAS = [
+  'Andina Software SRL', 'Valle Telecom S.A.', 'Banco del Tunari', 'Cóndor Logística', 'Kantuta Digital',
+  'Illimani Data Lab', 'Servicios Sajama', 'Tecnologías Mizque', 'Clínica Los Pinos', 'Instituto Tiquipaya',
+  'Agroindustrias Pairumani', 'Gobierno Municipal de Ejemplo', 'Red Quillacollo', 'Startup Wayra', 'Cooperativa Arani',
+  'Consultora Tunari', 'Sistemas Punata', 'Energía Cliza', 'Comercial Aroma', 'Seguros Rocha',
+]
+
+/** Agrega ID, fecha y origen (y nombre de organización) sin alterar las respuestas generadas. */
+function conMetadatos(filas: Fila[], prefijo: string, semilla: number, organizaciones: boolean): Fila[] {
+  const r = aleatorio(semilla)
+  const desde = Date.UTC(2026, 8, 10)
+  const hasta = Date.UTC(2026, 9, 17)
+  return filas.map((f, i) => ({
+    ...f,
+    id: `DEMO-${prefijo}-${String(i + 1).padStart(3, '0')}`,
+    fecha: new Date(desde + r() * (hasta - desde)).toISOString(),
+    origen: 'demo',
+    ...(organizaciones ? { nombre_empresa: ORGANIZACIONES_FICTICIAS[Math.floor(r() * ORGANIZACIONES_FICTICIAS.length)] } : {}),
+  }))
 }
+
+const DEMO: Record<SlugEncuesta, Fila[]> = {
+  titulados: conMetadatos(generarTitulados(186), 'T', 7, false),
+  empleadores: conMetadatos(generarEmpleadores(53), 'E', 11, true),
+}
+
+/** Respuestas ficticias individuales (pestaña Respuestas). */
+export const filasDemo = (encuesta: SlugEncuesta) => DEMO[encuesta]
 
 // ---------------------------------------------------------------- filtros
 

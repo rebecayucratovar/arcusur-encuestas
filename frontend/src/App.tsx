@@ -9,6 +9,7 @@ import EncuestaEmpleadores from './pages/EncuestaEmpleadores'
 import EncuestaTitulados from './pages/EncuestaTitulados'
 import Inicio from './pages/Inicio'
 import Login from './pages/Login'
+import Respuestas from './pages/Respuestas'
 
 function NoEncontrada() {
   return (
@@ -35,8 +36,7 @@ export default function App() {
           {/* Panel del Comité: P2 (Datos: importar/exportar) y P3 (Resumen, Análisis, Escenarios...). */}
           <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
             <Route index element={<Dashboard />} />
-            <Route path="respuestas" element={
-              <SeccionPendiente titulo="Respuestas" descripcion="Listado de envíos recibidos por formulario e importación." />} />
+            <Route path="respuestas" element={<Respuestas />} />
             <Route path="datos" element={
               <SeccionPendiente titulo="Datos" descripcion="Importación de CSV/Excel y exportación de resultados." />} />
             <Route path="analisis" element={
