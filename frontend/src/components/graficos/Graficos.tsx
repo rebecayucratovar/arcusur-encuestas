@@ -1,4 +1,5 @@
 import { useRef, useState, type FocusEvent, type PointerEvent, type ReactNode } from 'react'
+import { escala } from '../../lib/escala'
 import type { Categoria } from '../../lib/resumen'
 
 const total = (datos: Categoria[]) => datos.reduce((a, d) => a + d.valor, 0)
@@ -117,13 +118,6 @@ export function Barras({ datos, leyenda }: { datos: Categoria[]; leyenda?: [stri
       <Tooltip punto={punto} t={t} />
     </div>
   )
-}
-
-/** Máximo "redondo" del eje y sus marcas (0, 10, 20...). */
-function escala(max: number): number[] {
-  const paso = [1, 2, 5, 10, 20, 25, 50, 100].find((p) => max / p <= 5) ?? Math.ceil(max / 5)
-  const tope = Math.max(paso, Math.ceil(max / paso) * paso)
-  return Array.from({ length: tope / paso + 1 }, (_, i) => i * paso)
 }
 
 export function Columnas({ datos }: { datos: Categoria[] }) {

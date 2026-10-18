@@ -78,6 +78,23 @@ const ORGANIZACIONES_FICTICIAS = [
   'Consultora Tunari', 'Sistemas Punata', 'Energía Cliza', 'Comercial Aroma', 'Seguros Rocha',
 ]
 
+// Frases de ejemplo para las preguntas abiertas de empleadores (10, 11 y 12).
+const TEXTOS_DEMO: Record<string, string[]> = {
+  nuevas_areas: [
+    'Inteligencia artificial', 'Ciberseguridad', 'Computación en la nube', 'Análisis de datos', 'IA generativa',
+    'Machine learning', 'Automatización de procesos', 'Ciencia de datos', 'DevOps', 'Internet de las cosas (IoT)',
+    'Desarrollo móvil', 'Arquitectura de software', 'Big Data', 'Agentes de IA', 'Blockchain', 'Transformación digital',
+  ],
+  nuevas_herramientas: [
+    'Python', 'Git y GitHub', 'Docker', 'AWS', 'Power BI', 'SQL Server', 'PostgreSQL', 'Linux', 'Jira', 'React',
+    'Node.js', 'Kubernetes', 'Azure', 'Claude Code', 'Google Cloud', 'Flutter', 'Postman', 'TensorFlow', 'Grafana', 'Terraform',
+  ],
+  competencias: [
+    'Trabajo en equipo', 'Comunicación efectiva', 'Resolución de problemas', 'Aprendizaje continuo', 'Inglés técnico',
+    'Pensamiento crítico', 'Adaptabilidad', 'Liderazgo', 'Gestión de proyectos',
+  ],
+}
+
 function responder(
   slug: SlugEncuesta, q: Question, r: () => number, previas: Answers, pesosAzar: Map<string, Record<string, number>>,
 ): string | string[] | undefined {
@@ -115,7 +132,13 @@ function responder(
   if (q.code === 'nombre_empresa' && slug === 'empleadores') {
     return ORGANIZACIONES_FICTICIAS[Math.floor(r() * ORGANIZACIONES_FICTICIAS.length)]
   }
-  return undefined // los textos libres quedan vacíos en la demostración
+  const frases = TEXTOS_DEMO[q.code]
+  if (frases) {
+    // 1 a 3 frases, con preferencia por las primeras de la lista (las más mencionadas).
+    const elegidas = new Set(Array.from({ length: 1 + Math.floor(r() * 3) }, () => frases[Math.floor(r() ** 1.8 * frases.length)]))
+    return [...elegidas].join(', ')
+  }
+  return undefined // el resto de textos libres queda vacío en la demostración
 }
 
 /** Genera las respuestas ficticias de una encuesta a partir de su catálogo. */

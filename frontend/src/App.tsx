@@ -5,9 +5,11 @@ import { IconoFlechaIzq } from './components/Iconos'
 import RutaAdmin from './components/RutaAdmin'
 import SesionProvider from './components/SesionProvider'
 import Analisis from './pages/Analisis'
+import Comparacion from './pages/Comparacion'
 import Dashboard from './pages/Dashboard'
 import EncuestaEmpleadores from './pages/EncuestaEmpleadores'
 import EncuestaTitulados from './pages/EncuestaTitulados'
+import Escenarios from './pages/Escenarios'
 import Inicio from './pages/Inicio'
 import Login from './pages/Login'
 import Respuestas from './pages/Respuestas'
@@ -41,10 +43,8 @@ export default function App() {
             <Route path="datos" element={
               <SeccionPendiente titulo="Datos" descripcion="Importación de CSV/Excel y exportación de resultados." />} />
             <Route path="analisis" element={<Analisis />} />
-            <Route path="escenarios" element={
-              <SeccionPendiente titulo="Escenarios" descripcion="Simulación de escenarios para la toma de decisiones." />} />
-            <Route path="comparacion" element={
-              <SeccionPendiente titulo="Empleadores vs. Titulados" descripcion="Contraste entre la percepción de empleadores y titulados." />} />
+            <Route path="escenarios" element={<Escenarios />} />
+            <Route path="comparacion" element={<Comparacion />} />
           </Route>
 
           <Route path="*" element={<NoEncontrada />} />
