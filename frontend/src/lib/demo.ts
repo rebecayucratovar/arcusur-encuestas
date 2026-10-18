@@ -1,0 +1,284 @@
+// Respuestas ficticias generadas a partir del catálogo REAL (GET /encuestas/{slug}):
+// mismas preguntas, opciones y ramas que los formularios. Siempre son las mismas
+// (generador con semilla), así Resumen, Respuestas y Análisis cuadran entre sí.
+
+import type { Answers, Question, Survey } from '../types'
+import type { SlugEncuesta } from './admin'
+import { evaluar } from './condiciones'
+
+/** Una respuesta aplanada: metadatos + valores por código de pregunta. */
+export type Fila = Record<string, string | string[] | undefined>
+
+export const TOTAL_DEMO: Record<SlugEncuesta, number> = { titulados: 186, empleadores: 53 }
+
+export function aleatorio(semilla: number) {
+  return () => {
+    semilla |= 0
+    semilla = (semilla + 0x6d2b79f5) | 0
+    let t = Math.imul(semilla ^ (semilla >>> 15), 1 | semilla)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function elegir(r: () => number, pesos: Record<string, number>): string {
+  const entradas = Object.entries(pesos).filter(([, p]) => p > 0)
+  let x = r() * entradas.reduce((a, [, p]) => a + p, 0)
+  for (const [clave, peso] of entradas) {
+    x -= peso
+    if (x <= 0) return clave
+  }
+  return entradas[0][0]
+}
+
+// Distribuciones verosímiles para las preguntas clave; el resto usa pesos al azar.
+const PESOS: Record<SlugEncuesta, Record<string, Record<string, number>>> = {
+  titulados: {
+    edad: { '15_18': 0, '19_22': 3, '23_26': 30, '27_30': 30, '31_34': 20, '35_mas': 17 },
+    genero: { hombre: 72, mujer: 28 },
+    formacion: { si: 38, no: 62 },
+    nivel_formacion: { diplomado: 55, especialidad: 15, maestria: 27, doctorado: 3, posdoctorado: 0 },
+    interes_posgrado: { si: 72, no: 28 },
+    area_posgrado: { ia: 34, ing_software: 29, redes_seguridad: 17, base_datos: 14, robotica: 6 },
+    situacion_laboral: { trabaja: 80, no_trabaja: 7, emprende: 13 },
+    sector_trabajo: { publico: 25, privado: 75 },
+    departamento_trabajo: { cochabamba: 62, la_paz: 12, santa_cruz: 14, extranjero: 6, chuquisaca: 2, oruro: 2, tarija: 1, potosi: 1 },
+    remuneracion: { menos_2500: 8, '2500_3500': 27, '3501_5000': 40, '5001_7000': 38, '7001_10000': 22, mas_10000: 13 },
+    trabajo_antes: { si: 60, no: 40 },
+    tiempo_primer_trabajo: { ya_trabajaba: 32, menos_1_mes: 31, '1_4_meses': 48, '4_8_meses': 37, '8_12_meses': 17, mas_12_meses: 15 },
+    satisfaccion_carrera: { totalmente_desacuerdo: 5, en_desacuerdo: 20, de_acuerdo: 55, totalmente_acuerdo: 20 },
+    concordancia_formacion: { totalmente_desacuerdo: 6, en_desacuerdo: 28, de_acuerdo: 52, totalmente_acuerdo: 14 },
+    pertinencia_trabajo: { totalmente_desacuerdo: 4, en_desacuerdo: 14, de_acuerdo: 50, totalmente_acuerdo: 32 },
+    interes_red: { si: 70, no: 30 },
+  },
+  empleadores: {
+    tipo_organizacion: { privado: 70, publico: 30 },
+    tamano_organizacion: { grande: 35, mediana: 15, pequena: 20, micro: 30 },
+    rubro: {
+      desarrollo_software: 36, telecomunicaciones: 9, banca: 6, sector_publico: 7, educacion: 5, industria: 5,
+      comercio: 4, servicios_ti: 8, startups: 8, salud: 5, consultoria: 4, soporte_tecnico: 3,
+    },
+    contrataciones_cinco_anios: { si: 79, no: 21 },
+    probabilidad_contratar: { alta: 34, depende_crecimiento: 49, no_prevista: 14, no_requiere: 3 },
+    nivel_formacion: { licenciatura: 66, diplomado: 10, especialidad: 15, maestria: 8, doctorado: 1 },
+    medio_convocatoria: { internet: 55, postulacion: 18, recomendacion: 12, otros: 9, medios_escritos: 4, oferta_personal: 2 },
+  },
+}
+
+// Años de vida profesional según la edad (mínimo, máximo).
+const ANIOS_POR_EDAD: Record<string, [number, number]> = {
+  '15_18': [0, 0], '19_22': [0, 1], '23_26': [0, 4], '27_30': [2, 8], '31_34': [5, 12], '35_mas': [8, 22],
+}
+
+// Nombres inventados: los datos de demostración no deben atribuirse a organizaciones reales.
+const ORGANIZACIONES_FICTICIAS = [
+  'Andina Software SRL', 'Valle Telecom S.A.', 'Banco del Tunari', 'Cóndor Logística', 'Kantuta Digital',
+  'Illimani Data Lab', 'Servicios Sajama', 'Tecnologías Mizque', 'Clínica Los Pinos', 'Instituto Tiquipaya',
+  'Agroindustrias Pairumani', 'Gobierno Municipal de Ejemplo', 'Red Quillacollo', 'Startup Wayra', 'Cooperativa Arani',
+  'Consultora Tunari', 'Sistemas Punata', 'Energía Cliza', 'Comercial Aroma', 'Seguros Rocha',
+]
+
+// Frases de ejemplo para las preguntas abiertas de empleadores (10, 11 y 12).
+const TEXTOS_DEMO: Record<string, string[]> = {
+  nuevas_areas: [
+    'Inteligencia artificial', 'Ciberseguridad', 'Computación en la nube', 'Análisis de datos', 'IA generativa',
+    'Machine learning', 'Automatización de procesos', 'Ciencia de datos', 'DevOps', 'Internet de las cosas (IoT)',
+    'Desarrollo móvil', 'Arquitectura de software', 'Big Data', 'Agentes de IA', 'Blockchain', 'Transformación digital',
+  ],
+  nuevas_herramientas: [
+    'Python', 'Git y GitHub', 'Docker', 'AWS', 'Power BI', 'SQL Server', 'PostgreSQL', 'Linux', 'Jira', 'React',
+    'Node.js', 'Kubernetes', 'Azure', 'Claude Code', 'Google Cloud', 'Flutter', 'Postman', 'TensorFlow', 'Grafana', 'Terraform',
+  ],
+  competencias: [
+    'Trabajo en equipo', 'Comunicación efectiva', 'Resolución de problemas', 'Aprendizaje continuo', 'Inglés técnico',
+    'Pensamiento crítico', 'Adaptabilidad', 'Liderazgo', 'Gestión de proyectos',
+  ],
+}
+
+function responder(
+  slug: SlugEncuesta, q: Question, r: () => number, previas: Answers, pesosAzar: Map<string, Record<string, number>>,
+): string | string[] | undefined {
+  const pesosEncuesta = PESOS[slug] ?? {}
+  const cfg = q.configuration
+  if (cfg.store === 'contact' || cfg.other_for) return undefined
+
+  if (q.question_type === 'single_choice' || q.question_type === 'likert') {
+    return elegir(r, pesosEncuesta[q.code] ?? pesosAzar.get(q.code)!)
+  }
+  if (q.question_type === 'multiple_choice') {
+    const min = cfg.min_selected ?? 1
+    const max = cfg.max_selected ?? Math.min(3, q.options.length)
+    const cantidad = min + Math.floor(r() * (max - min + 1))
+    const pesos = { ...pesosAzar.get(q.code)! }
+    const elegidas: string[] = []
+    while (elegidas.length < cantidad && Object.values(pesos).some((p) => p > 0)) {
+      const v = elegir(r, pesos)
+      elegidas.push(v)
+      pesos[v] = 0
+    }
+    return elegidas
+  }
+  if (cfg.input === 'integer') {
+    if (q.code === 'anios_profesional') {
+      const [a, b] = ANIOS_POR_EDAD[String(previas.edad)] ?? [0, 10]
+      return String(a + Math.floor(r() * (b - a + 1)))
+    }
+    if (q.code === 'anios_desempleado') {
+      const tope = Number(previas[cfg.max_question ?? ''] ?? 0)
+      return String(Math.min(tope, Math.floor(r() * r() * 4)))
+    }
+    return String(Math.floor(r() * 10))
+  }
+  if (q.code === 'nombre_empresa' && slug === 'empleadores') {
+    return ORGANIZACIONES_FICTICIAS[Math.floor(r() * ORGANIZACIONES_FICTICIAS.length)]
+  }
+  const frases = TEXTOS_DEMO[q.code]
+  if (frases) {
+    // 1 a 3 frases, con preferencia por las primeras de la lista (las más mencionadas).
+    const elegidas = new Set(Array.from({ length: 1 + Math.floor(r() * 3) }, () => frases[Math.floor(r() ** 1.8 * frases.length)]))
+    return [...elegidas].join(', ')
+  }
+  return undefined // el resto de textos libres queda vacío en la demostración
+}
+
+/** Genera las respuestas ficticias de una encuesta a partir de su catálogo. */
+export function generarDemo(encuesta: Survey): Fila[] {
+  const slug = encuesta.slug as SlugEncuesta
+  const r = aleatorio(slug === 'titulados' ? 2026 : 1832)
+  const preguntas = encuesta.sections.flatMap((s) => s.questions)
+
+  // Pesos al azar (pero fijos) para las preguntas sin distribución definida.
+  // En las Likert, las opciones con mayor puntaje pesan más (respuestas algo favorables).
+  const pesosAzar = new Map(preguntas.map((q) => [
+    q.code, Object.fromEntries(q.options.map((o) => [
+      o.value, 1 + Math.floor(r() * (q.question_type === 'likert' ? 3 : 6)) + (q.configuration.scores?.[o.value] ?? 0) * 2,
+    ])),
+  ]))
+
+  const desde = Date.UTC(2026, 8, 10)
+  const hasta = Date.UTC(2026, 9, 17)
+  const prefijo = slug === 'titulados' ? 'T' : 'E'
+
+  return Array.from({ length: TOTAL_DEMO[slug] ?? 50 }, (_, i) => {
+    const respuestas: Answers = {}
+    for (const q of preguntas) {
+      if (!evaluar(q.display_condition, respuestas)) continue
+      const v = responder(slug, q, r, respuestas, pesosAzar)
+      if (v !== undefined) respuestas[q.code] = v
+    }
+    return {
+      ...respuestas,
+      id: `DEMO-${prefijo}-${String(i + 1).padStart(3, '0')}`,
+      fecha: new Date(desde + r() * (hasta - desde)).toISOString(),
+      origen: 'demo',
+    }
+  })
+}
+
+// ---------------------------------------------------------------- pestaña Datos (solo demostración)
+
+/** Contacto de la red (tss_submission_contacts + fecha y origen del envío). */
+export interface Contacto {
+  submission_id: string
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  submitted_at: string
+  source: string
+}
+
+const APELLIDOS = ['vargas', 'mamani', 'villarroel', 'claros', 'gutierrez', 'rojas', 'escobar', 'quispe', 'flores', 'torrez', 'arce', 'montano']
+
+/** Contactos ficticios (dominio ejemplo.com, que no pertenece a nadie). */
+export function contactosDemo(encuesta: Survey): Contacto[] {
+  const r = aleatorio(77)
+  return generarDemo(encuesta)
+    .filter((f) => encuesta.slug !== 'titulados' || f.interes_red === 'si')
+    .map((f, i) => {
+      const usuario = `${'abcdeghjlmprs'[Math.floor(r() * 13)]}${APELLIDOS[Math.floor(r() * APELLIDOS.length)]}${i + 10}`
+      const titulados = encuesta.slug === 'titulados'
+      return {
+        submission_id: String(f.id),
+        email: `${usuario}@ejemplo.com`,
+        phone: titulados && r() > 0.15 ? `+591 7${Math.floor(r() * 90 + 10)} ${Math.floor(r() * 90000 + 10000)}` : null,
+        linkedin_url: titulados && r() > 0.25 ? `https://www.linkedin.com/in/${usuario}-ejemplo` : null,
+        submitted_at: String(f.fecha),
+        source: 'demo',
+      }
+    })
+}
+
+/**
+ * CSV de ejemplo con la forma de una exportación real (Microsoft Forms para titulados,
+ * Google Forms para empleadores) y algunos problemas a propósito, para probar el mapeo.
+ */
+export function archivoEjemplo(encuesta: Survey): { nombre: string; texto: string } {
+  const titulados = encuesta.slug === 'titulados'
+  const preguntas = encuesta.sections.flatMap((s) => s.questions).filter((q) => !q.configuration.other_for)
+  const filas = generarDemo(encuesta).slice(0, 26)
+  const r = aleatorio(5)
+  const dos = (n: number) => String(n).padStart(2, '0')
+
+  const celda = (q: Question, f: Fila, i: number): string => {
+    if (q.configuration.store === 'contact') {
+      if (titulados && f.interes_red !== 'si') return ''
+      if (q.configuration.contact_field === 'email') return `contacto${i + 1}@ejemplo.com`
+      if (q.configuration.contact_field === 'phone') return `+591 7${dos(Math.floor(r() * 90 + 10))} ${Math.floor(r() * 90000 + 10000)}`
+      return ''
+    }
+    const v = f[q.code]
+    const etiqueta = (x: string) => q.options.find((o) => o.value === x)?.label ?? x
+    if (Array.isArray(v)) return v.map(etiqueta).join(titulados ? ';' : ', ')
+    return v === undefined ? '' : etiqueta(v)
+  }
+  const tabla = filas.map((f, i) => preguntas.map((q) => celda(q, f, i)))
+  const col = (codigo: string) => preguntas.findIndex((q) => q.code === codigo)
+  const primeraCon = (codigo: string, desde: number) => {
+    const c = col(codigo)
+    const i = tabla.findIndex((t, j) => j >= desde && t[c] !== '')
+    return i < 0 ? null : i
+  }
+
+  // Problemas a propósito (los detecta el reporte de limpieza).
+  if (titulados) {
+    const prof = col('anios_profesional')
+    let i = primeraCon('anios_profesional', 4)
+    if (i !== null) tabla[i][prof] = '75'
+    i = primeraCon('anios_desempleado', 8)
+    if (i !== null) tabla[i][col('anios_desempleado')] = String(Number(tabla[i][prof]) + 3)
+    i = primeraCon('departamento_trabajo', 10)
+    if (i !== null) tabla[i][col('departamento_trabajo')] = 'Cbba'
+    tabla[14][col('genero')] = ''
+    i = primeraCon('telefono', 16)
+    if (i !== null) tabla[i][col('telefono')] = '77-abc'
+  } else {
+    tabla[6][col('nombre_empresa')] = ''
+    tabla[11][col('correo')] = 'sin correo'
+  }
+
+  const fecha = (i: number) => {
+    const d = new Date(Date.UTC(2026, 8, 1 + Math.floor(i * 1.3), 13 + (i % 8), (i * 7) % 60, (i * 13) % 60))
+    const [a, m, dia, h, mi, s] = [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()]
+    return titulados
+      ? `${m}/${dia}/${a} ${h}:${dos(mi)}:${dos(s)}` // Microsoft Forms (mes/día/año)
+      : `${a}/${dos(m)}/${dos(dia)} ${h > 12 ? h - 12 : h}:${dos(mi)}:${dos(s)} ${h >= 12 ? 'p. m.' : 'a. m.'} GMT-4` // Google Forms
+  }
+  const metadatos = titulados ? ['ID', 'Hora de inicio', 'Hora de finalización', 'Correo electrónico', 'Nombre'] : ['Marca temporal']
+  const extra = titulados ? ['Comentarios adicionales'] : []
+  // Un encabezado editado a mano (sin algunas palabras) para que el mapeo lo marque "revisar".
+  const encabezado = (q: Question) => (q.code === (titulados ? 'medio_obtencion' : 'probabilidad_contratar')
+    ? q.prompt.split(' ').filter((_, i) => i % 4 !== 3).join(' ')
+    : q.prompt)
+  const lineas = [
+    [...metadatos, ...preguntas.map(encabezado), ...extra],
+    ...tabla.map((t, i) => [
+      ...(titulados ? [String(i === 20 ? 4 : i + 1), fecha(i), fecha(i), 'anonymous', ''] : [fecha(i)]),
+      ...t, ...(titulados ? [''] : []),
+    ]),
+  ]
+  const csv = lineas.map((l) => l.map((x) => (/[",;\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x)).join(',')).join('\r\n')
+  return {
+    nombre: titulados ? 'Encuesta_Titulados_MicrosoftForms.csv' : 'Encuesta_Empleadores_GoogleForms.csv',
+    texto: csv,
+  }
+}
