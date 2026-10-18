@@ -1,5 +1,7 @@
 """Guardado de respuestas: lo usan POST /encuestas/{slug}/respuestas y el importador de CSV."""
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -62,12 +64,15 @@ def _borrar_envio(submission_id):
     supabase.table("tss_submissions").delete().eq("id", submission_id).execute()
 
 
-def guardar_respuesta(slug, respuestas, source=None, encuesta=None):
+def guardar_respuesta(slug, respuestas, source=None, encuesta=None, submitted_at=None):
     """Valida y guarda un envío completo. Devuelve el id de tss_submissions.
 
     - `encuesta`: la encuesta ya cargada (el importador la pasa para no
       consultarla en cada fila). Si es None se carga por `slug`.
     - `source`: origen del envío; si es None se usa el default de la tabla.
+    - `submitted_at`: fecha original del envío (datetime), p. ej. la columna
+      "Hora de finalización" del CSV. Si es None, la BD pone la hora actual.
+      Sin zona horaria se asume la de Bolivia (UTC-4).
     Lanza RespuestaInvalida o EncuestaNoEncontrada.
     """
     encuesta = encuesta or cargar_encuesta(slug)
@@ -83,6 +88,8 @@ def guardar_respuesta(slug, respuestas, source=None, encuesta=None):
     }
     if source:
         envio["source"] = source
+    if submitted_at is not None:
+        envio["submitted_at"] = normalizar_fecha(submitted_at).isoformat()
     submission_id = supabase.table("tss_submissions").insert(envio).execute().data[0]["id"]
 
     try:
@@ -104,6 +111,20 @@ def guardar_respuesta(slug, respuestas, source=None, encuesta=None):
         _borrar_envio(submission_id)
         raise
     return submission_id
+
+
+BOLIVIA = timezone(timedelta(hours=-4))
+
+
+def normalizar_fecha(fecha):
+    """Valida la fecha de un envío importado: con zona horaria y no futura."""
+    if not isinstance(fecha, datetime):
+        raise ValueError("submitted_at debe ser un datetime")
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=BOLIVIA)
+    if fecha > datetime.now(timezone.utc):
+        raise ValueError(f"La fecha {fecha.isoformat()} está en el futuro")
+    return fecha
 
 
 class EnvioRespuestas(BaseModel):

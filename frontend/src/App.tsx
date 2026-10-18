@@ -1,12 +1,12 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import AdminLayout from './components/admin/AdminLayout'
-import SeccionPendiente from './components/admin/SeccionPendiente'
 import { IconoFlechaIzq } from './components/Iconos'
 import RutaAdmin from './components/RutaAdmin'
 import SesionProvider from './components/SesionProvider'
 import Analisis from './pages/Analisis'
 import Comparacion from './pages/Comparacion'
 import Dashboard from './pages/Dashboard'
+import Datos from './pages/Datos'
 import EncuestaEmpleadores from './pages/EncuestaEmpleadores'
 import EncuestaTitulados from './pages/EncuestaTitulados'
 import Escenarios from './pages/Escenarios'
@@ -40,8 +40,7 @@ export default function App() {
           <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>
             <Route index element={<Dashboard />} />
             <Route path="respuestas" element={<Respuestas />} />
-            <Route path="datos" element={
-              <SeccionPendiente titulo="Datos" descripcion="Importación de CSV/Excel y exportación de resultados." />} />
+            <Route path="datos" element={<Datos />} />
             <Route path="analisis" element={<Analisis />} />
             <Route path="escenarios" element={<Escenarios />} />
             <Route path="comparacion" element={<Comparacion />} />

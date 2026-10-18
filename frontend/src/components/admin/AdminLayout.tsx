@@ -148,7 +148,7 @@ export default function AdminLayout() {
         )}
 
         <main className="admin__contenido">
-          <Outlet context={{ encuesta, resumen, origenes } satisfies ContextoAdmin} />
+          <Outlet context={{ encuesta, resumen, origenes, alternarOrigen } satisfies ContextoAdmin} />
         </main>
       </div>
     </div>

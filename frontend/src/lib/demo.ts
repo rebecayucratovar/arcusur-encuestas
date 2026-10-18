@@ -174,3 +174,111 @@ export function generarDemo(encuesta: Survey): Fila[] {
     }
   })
 }
+
+// ---------------------------------------------------------------- pestaña Datos (solo demostración)
+
+/** Contacto de la red (tss_submission_contacts + fecha y origen del envío). */
+export interface Contacto {
+  submission_id: string
+  email: string | null
+  phone: string | null
+  linkedin_url: string | null
+  submitted_at: string
+  source: string
+}
+
+const APELLIDOS = ['vargas', 'mamani', 'villarroel', 'claros', 'gutierrez', 'rojas', 'escobar', 'quispe', 'flores', 'torrez', 'arce', 'montano']
+
+/** Contactos ficticios (dominio ejemplo.com, que no pertenece a nadie). */
+export function contactosDemo(encuesta: Survey): Contacto[] {
+  const r = aleatorio(77)
+  return generarDemo(encuesta)
+    .filter((f) => encuesta.slug !== 'titulados' || f.interes_red === 'si')
+    .map((f, i) => {
+      const usuario = `${'abcdeghjlmprs'[Math.floor(r() * 13)]}${APELLIDOS[Math.floor(r() * APELLIDOS.length)]}${i + 10}`
+      const titulados = encuesta.slug === 'titulados'
+      return {
+        submission_id: String(f.id),
+        email: `${usuario}@ejemplo.com`,
+        phone: titulados && r() > 0.15 ? `+591 7${Math.floor(r() * 90 + 10)} ${Math.floor(r() * 90000 + 10000)}` : null,
+        linkedin_url: titulados && r() > 0.25 ? `https://www.linkedin.com/in/${usuario}-ejemplo` : null,
+        submitted_at: String(f.fecha),
+        source: 'demo',
+      }
+    })
+}
+
+/**
+ * CSV de ejemplo con la forma de una exportación real (Microsoft Forms para titulados,
+ * Google Forms para empleadores) y algunos problemas a propósito, para probar el mapeo.
+ */
+export function archivoEjemplo(encuesta: Survey): { nombre: string; texto: string } {
+  const titulados = encuesta.slug === 'titulados'
+  const preguntas = encuesta.sections.flatMap((s) => s.questions).filter((q) => !q.configuration.other_for)
+  const filas = generarDemo(encuesta).slice(0, 26)
+  const r = aleatorio(5)
+  const dos = (n: number) => String(n).padStart(2, '0')
+
+  const celda = (q: Question, f: Fila, i: number): string => {
+    if (q.configuration.store === 'contact') {
+      if (titulados && f.interes_red !== 'si') return ''
+      if (q.configuration.contact_field === 'email') return `contacto${i + 1}@ejemplo.com`
+      if (q.configuration.contact_field === 'phone') return `+591 7${dos(Math.floor(r() * 90 + 10))} ${Math.floor(r() * 90000 + 10000)}`
+      return ''
+    }
+    const v = f[q.code]
+    const etiqueta = (x: string) => q.options.find((o) => o.value === x)?.label ?? x
+    if (Array.isArray(v)) return v.map(etiqueta).join(titulados ? ';' : ', ')
+    return v === undefined ? '' : etiqueta(v)
+  }
+  const tabla = filas.map((f, i) => preguntas.map((q) => celda(q, f, i)))
+  const col = (codigo: string) => preguntas.findIndex((q) => q.code === codigo)
+  const primeraCon = (codigo: string, desde: number) => {
+    const c = col(codigo)
+    const i = tabla.findIndex((t, j) => j >= desde && t[c] !== '')
+    return i < 0 ? null : i
+  }
+
+  // Problemas a propósito (los detecta el reporte de limpieza).
+  if (titulados) {
+    const prof = col('anios_profesional')
+    let i = primeraCon('anios_profesional', 4)
+    if (i !== null) tabla[i][prof] = '75'
+    i = primeraCon('anios_desempleado', 8)
+    if (i !== null) tabla[i][col('anios_desempleado')] = String(Number(tabla[i][prof]) + 3)
+    i = primeraCon('departamento_trabajo', 10)
+    if (i !== null) tabla[i][col('departamento_trabajo')] = 'Cbba'
+    tabla[14][col('genero')] = ''
+    i = primeraCon('telefono', 16)
+    if (i !== null) tabla[i][col('telefono')] = '77-abc'
+  } else {
+    tabla[6][col('nombre_empresa')] = ''
+    tabla[11][col('correo')] = 'sin correo'
+  }
+
+  const fecha = (i: number) => {
+    const d = new Date(Date.UTC(2026, 8, 1 + Math.floor(i * 1.3), 13 + (i % 8), (i * 7) % 60, (i * 13) % 60))
+    const [a, m, dia, h, mi, s] = [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()]
+    return titulados
+      ? `${m}/${dia}/${a} ${h}:${dos(mi)}:${dos(s)}` // Microsoft Forms (mes/día/año)
+      : `${a}/${dos(m)}/${dos(dia)} ${h > 12 ? h - 12 : h}:${dos(mi)}:${dos(s)} ${h >= 12 ? 'p. m.' : 'a. m.'} GMT-4` // Google Forms
+  }
+  const metadatos = titulados ? ['ID', 'Hora de inicio', 'Hora de finalización', 'Correo electrónico', 'Nombre'] : ['Marca temporal']
+  const extra = titulados ? ['Comentarios adicionales'] : []
+  // Un encabezado editado a mano (sin algunas palabras) para que el mapeo lo marque "revisar".
+  const encabezado = (q: Question) => (q.code === (titulados ? 'medio_obtencion' : 'probabilidad_contratar')
+    ? q.prompt.split(' ').filter((_, i) => i % 4 !== 3).join(' ')
+    : q.prompt)
+  const lineas = [
+    [...metadatos, ...preguntas.map(encabezado), ...extra],
+    ...tabla.map((t, i) => [
+      ...(titulados ? [String(i === 20 ? 4 : i + 1), fecha(i), fecha(i), 'anonymous', ''] : [fecha(i)]),
+      ...t, ...(titulados ? [''] : []),
+    ]),
+  ]
+  const csv = lineas.map((l) => l.map((x) => (/[",;\n]/.test(x) ? `"${x.replace(/"/g, '""')}"` : x)).join(',')).join('\r\n')
+  return {
+    nombre: titulados ? 'Encuesta_Titulados_MicrosoftForms.csv' : 'Encuesta_Empleadores_GoogleForms.csv',
+    texto: csv,
+  }
+}
