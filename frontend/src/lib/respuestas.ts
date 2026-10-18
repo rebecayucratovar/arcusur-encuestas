@@ -5,8 +5,9 @@
 // (los mismos de tss_question_options.value); aquí se traducen a texto.
 // No incluye datos de contacto (tss_submission_contacts).
 
+import type { Survey } from '../types'
 import type { SlugEncuesta } from './admin'
-import { filasDemo, type Fila } from './resumen'
+import type { Fila } from './demo'
 
 export interface FilaRespuesta {
   id: string
@@ -14,8 +15,8 @@ export interface FilaRespuesta {
   fecha: string
   /** tss_submissions.source: 'public_link' | 'csv_import' | 'demo'. */
   origen: string
-  /** Respuestas por código de pregunta. */
-  valores: Record<string, string | number | undefined>
+  /** Respuestas por código de pregunta (selección múltiple: lista de códigos). */
+  valores: Record<string, string | string[] | undefined>
 }
 
 export interface Columna {
@@ -38,8 +39,7 @@ export const COLUMNAS: Record<SlugEncuesta, Columna[]> = {
     { codigo: 'situacion_laboral', titulo: 'Situación', etiquetas: {
       trabaja: 'Trabaja', no_trabaja: 'No trabaja', emprende: 'Emprende' } },
     { codigo: 'interes_posgrado', titulo: 'Interés posgrado', etiquetas: SI_NO },
-    { codigo: 'satisfaccion', titulo: 'Satisfacción', etiquetas: {
-      1: 'Nada satisfecho', 2: 'Poco satisfecho', 3: 'Satisfecho', 4: 'Muy satisfecho' } },
+    { codigo: 'satisfaccion_carrera', titulo: 'Satisfacción con la carrera' },
   ],
   empleadores: [
     { codigo: 'nombre_empresa', titulo: 'Organización', recortar: true },
@@ -63,21 +63,23 @@ export const FILTRO_TABLA: Record<SlugEncuesta, string> = {
   empleadores: 'tipo_organizacion',
 }
 
-export const ORIGENES: Record<string, { texto: string; clase: string }> = {
-  public_link: { texto: 'Formulario', clase: 'origen--formulario' },
-  csv_import: { texto: 'CSV', clase: 'origen--csv' },
-  demo: { texto: 'Demostración', clase: 'origen--demo' },
+/** Texto de cada opción según el catálogo: {codigo: {valor: etiqueta}}. */
+export function etiquetasCatalogo(encuesta: Survey | null): Record<string, Record<string, string>> {
+  const mapa: Record<string, Record<string, string>> = {}
+  for (const q of encuesta?.sections.flatMap((s) => s.questions) ?? []) {
+    mapa[q.code] = Object.fromEntries(q.options.map((o) => [o.value, o.label]))
+  }
+  return mapa
 }
 
-/** Texto que se muestra para un valor de una columna. */
-export function textoCelda(col: Columna, valor: string | number | undefined): string {
-  if (valor === undefined || valor === null || valor === '') return '—'
-  return col.etiquetas?.[String(valor)] ?? String(valor)
+/** Texto que se muestra para un valor: etiqueta propia de la columna, o la del catálogo. */
+export function textoCelda(col: Columna, valor: Fila[string], catalogo: Record<string, Record<string, string>> = {}): string {
+  if (valor === undefined || valor === '' || (Array.isArray(valor) && valor.length === 0)) return '—'
+  const texto = (v: string) => col.etiquetas?.[v] ?? catalogo[col.codigo]?.[v] ?? v
+  return Array.isArray(valor) ? valor.map(texto).join(', ') : texto(String(valor))
 }
 
-/** Respuestas ficticias con la forma de `FilaRespuesta`. */
-export function respuestasDemo(encuesta: SlugEncuesta): FilaRespuesta[] {
-  return filasDemo(encuesta).map(({ id, fecha, origen, ...valores }: Fila) => ({
-    id: String(id), fecha: String(fecha), origen: String(origen), valores,
-  }))
+/** Una fila aplanada (ver lib/datos.ts) con la forma de `FilaRespuesta`. */
+export function aFilaRespuesta({ id, fecha, origen, ...valores }: Fila): FilaRespuesta {
+  return { id: String(id), fecha: String(fecha), origen: String(origen), valores }
 }

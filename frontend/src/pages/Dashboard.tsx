@@ -1,14 +1,11 @@
 import { useMemo, useState } from 'react'
+import EstadoDatos from '../components/admin/EstadoDatos'
 import { Barras, Columnas, Dona, TablaDatos } from '../components/graficos/Graficos'
 import { IconoDescargar, IconoIdea, IconoTabla } from '../components/Iconos'
 import { useContextoAdmin, type SlugEncuesta } from '../lib/admin'
+import { useDatosEncuesta } from '../lib/datos'
 import { exportarCSV } from '../lib/exportar'
-import { FILTROS, resumenDemo, type Grafico } from '../lib/resumen'
-
-// Por ahora el Resumen usa datos ficticios. Para conectarlo a la base de datos,
-// reemplazar `resumenDemo(...)` por una llamada a GET /admin/resumen/{slug}
-// que devuelva un `DatosResumen` (ver lib/resumen.ts) y poner
-// DATOS_DE_DEMOSTRACION = false en ese archivo.
+import { calcularResumen, FILTROS, type Grafico } from '../lib/resumen'
 
 function TarjetaGrafico({ g, unidad }: { g: Grafico; unidad: string }) {
   const [verTabla, setVerTabla] = useState(false)
@@ -39,9 +36,10 @@ function TarjetaGrafico({ g, unidad }: { g: Grafico; unidad: string }) {
   )
 }
 
-function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
+function Resumen({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: string[] }) {
   const [filtros, setFiltros] = useState<Record<string, string>>({})
-  const datos = useMemo(() => resumenDemo(encuesta, filtros), [encuesta, filtros])
+  const { filas, cargando, error } = useDatosEncuesta(encuesta, origenes)
+  const datos = useMemo(() => calcularResumen(encuesta, filas, filtros), [encuesta, filas, filtros])
 
   return (
     <>
@@ -54,6 +52,7 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
         </p>
       </div>
 
+      <EstadoDatos cargando={cargando} error={error} origenes={origenes} total={filas.length}>
       <div className="filtros">
         {FILTROS[encuesta].map((f) => (
           <label key={f.codigo} className="filtros__campo">
@@ -89,12 +88,13 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
           </div>
         </>
       )}
+      </EstadoDatos>
     </>
   )
 }
 
 export default function Dashboard() {
-  const { encuesta } = useContextoAdmin()
+  const { encuesta, origenes } = useContextoAdmin()
   // key: al cambiar de encuesta se reinician los filtros.
-  return <Resumen key={encuesta} encuesta={encuesta} />
+  return <Resumen key={encuesta} encuesta={encuesta} origenes={origenes} />
 }

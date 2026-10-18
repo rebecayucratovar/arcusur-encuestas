@@ -1,13 +1,8 @@
-// Datos de la pestaña Resumen del panel.
-//
-// CONTRATO para conectar con la base de datos: el backend debe devolver un
-// `DatosResumen` (GET /admin/resumen/{slug}?filtro=valor...). Mientras tanto,
-// `resumenDemo` genera respuestas ficticias y calcula lo mismo en el navegador.
+// Indicadores y gráficos de la pestaña Resumen, calculados a partir de las
+// respuestas (ver lib/datos.ts: hoy ficticias, luego las de la base de datos).
 
 import type { SlugEncuesta } from './admin'
-
-/** Mientras sea true, el Resumen muestra datos ficticios y el aviso de demostración. */
-export const DATOS_DE_DEMOSTRACION = true
+import type { Fila } from './demo'
 
 export interface Categoria {
   clave: string
@@ -71,102 +66,12 @@ function destacarMayor(datos: Categoria[]): Categoria[] {
   return datos.map((d) => ({ ...d, destacado: max > 0 && d.valor === max }))
 }
 
+/** Escala de acuerdo de titulados (catálogo: configuration.scores). */
+const PUNTAJE_ACUERDO: Record<string, number> = {
+  totalmente_desacuerdo: 1, en_desacuerdo: 2, de_acuerdo: 3, totalmente_acuerdo: 4,
+}
+
 const lider = (datos: Categoria[]) => [...datos].sort((a, b) => b.valor - a.valor)[0]
-
-// ---------------------------------------------------------------- generador ficticio
-
-export type Fila = Record<string, string | number | undefined>
-
-/** Generador pseudoaleatorio con semilla: los datos de demo son siempre los mismos. */
-function aleatorio(semilla: number) {
-  return () => {
-    semilla |= 0
-    semilla = (semilla + 0x6d2b79f5) | 0
-    let t = Math.imul(semilla ^ (semilla >>> 15), 1 | semilla)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-function elegir(r: () => number, pesos: Record<string, number>): string {
-  const total = Object.values(pesos).reduce((a, b) => a + b, 0)
-  let x = r() * total
-  for (const [clave, peso] of Object.entries(pesos)) {
-    x -= peso
-    if (x <= 0) return clave
-  }
-  return Object.keys(pesos)[0]
-}
-
-function generarTitulados(n: number): Fila[] {
-  const r = aleatorio(2026)
-  return Array.from({ length: n }, () => {
-    const situacion = elegir(r, { trabaja: 80, no_trabaja: 7, emprende: 13 })
-    const interes = elegir(r, { si: 72, no: 28 })
-    const tuvoTrabajo = situacion !== 'no_trabaja' || r() < 0.6
-    return {
-      edad: elegir(r, { '19_22': 3, '23_26': 30, '27_30': 30, '31_34': 20, '35_mas': 17 }),
-      genero: elegir(r, { hombre: 72, mujer: 28 }),
-      situacion_laboral: situacion,
-      interes_posgrado: interes,
-      area_posgrado: interes === 'si'
-        ? elegir(r, { ia: 34, ing_software: 29, redes_seguridad: 17, base_datos: 14, robotica: 6 }) : undefined,
-      satisfaccion: Number(elegir(r, { 1: 5, 2: 20, 3: 55, 4: 20 })),
-      remuneracion: situacion === 'trabaja'
-        ? elegir(r, { menos_2500: 8, '2500_3500': 27, '3501_5000': 40, '5001_7000': 38, '7001_10000': 22, mas_10000: 13 })
-        : undefined,
-      tiempo_primer_trabajo: tuvoTrabajo
-        ? elegir(r, { ya_trabajaba: 32, menos_1_mes: 31, '1_4_meses': 48, '4_8_meses': 37, '8_12_meses': 17, mas_12_meses: 15 })
-        : undefined,
-    }
-  })
-}
-
-function generarEmpleadores(n: number): Fila[] {
-  const r = aleatorio(1832)
-  return Array.from({ length: n }, () => ({
-    tipo_organizacion: elegir(r, { privado: 70, publico: 30 }),
-    tamano_organizacion: elegir(r, { grande: 35, mediana: 15, pequena: 20, micro: 30 }),
-    rubro: elegir(r, {
-      desarrollo_software: 36, telecomunicaciones: 9, banca: 6, sector_publico: 7, educacion: 5, industria: 5,
-      comercio: 4, servicios_ti: 8, startups: 8, salud: 5, consultoria: 4, soporte_tecnico: 3,
-    }),
-    contrataciones_cinco_anios: elegir(r, { si: 79, no: 21 }),
-    probabilidad_contratar: elegir(r, { alta: 34, depende_crecimiento: 49, no_prevista: 14, no_requiere: 3 }),
-    nivel_formacion: elegir(r, { licenciatura: 66, diplomado: 10, especialidad: 15, maestria: 8, doctorado: 1 }),
-    perfil_01: elegir(r, { totalmente_acuerdo: 50, parcialmente_acuerdo: 38, totalmente_desacuerdo: 8, no_sabe: 4 }),
-  }))
-}
-
-// Nombres inventados: los datos de demostración no deben atribuirse a organizaciones reales.
-const ORGANIZACIONES_FICTICIAS = [
-  'Andina Software SRL', 'Valle Telecom S.A.', 'Banco del Tunari', 'Cóndor Logística', 'Kantuta Digital',
-  'Illimani Data Lab', 'Servicios Sajama', 'Tecnologías Mizque', 'Clínica Los Pinos', 'Instituto Tiquipaya',
-  'Agroindustrias Pairumani', 'Gobierno Municipal de Ejemplo', 'Red Quillacollo', 'Startup Wayra', 'Cooperativa Arani',
-  'Consultora Tunari', 'Sistemas Punata', 'Energía Cliza', 'Comercial Aroma', 'Seguros Rocha',
-]
-
-/** Agrega ID, fecha y origen (y nombre de organización) sin alterar las respuestas generadas. */
-function conMetadatos(filas: Fila[], prefijo: string, semilla: number, organizaciones: boolean): Fila[] {
-  const r = aleatorio(semilla)
-  const desde = Date.UTC(2026, 8, 10)
-  const hasta = Date.UTC(2026, 9, 17)
-  return filas.map((f, i) => ({
-    ...f,
-    id: `DEMO-${prefijo}-${String(i + 1).padStart(3, '0')}`,
-    fecha: new Date(desde + r() * (hasta - desde)).toISOString(),
-    origen: 'demo',
-    ...(organizaciones ? { nombre_empresa: ORGANIZACIONES_FICTICIAS[Math.floor(r() * ORGANIZACIONES_FICTICIAS.length)] } : {}),
-  }))
-}
-
-const DEMO: Record<SlugEncuesta, Fila[]> = {
-  titulados: conMetadatos(generarTitulados(186), 'T', 7, false),
-  empleadores: conMetadatos(generarEmpleadores(53), 'E', 11, true),
-}
-
-/** Respuestas ficticias individuales (pestaña Respuestas). */
-export const filasDemo = (encuesta: SlugEncuesta) => DEMO[encuesta]
 
 // ---------------------------------------------------------------- filtros
 
@@ -197,7 +102,10 @@ function resumenTitulados(f: Fila[], totalSinFiltros: number): DatosResumen {
   const n = f.length
   const ocupados = f.filter((x) => x.situacion_laboral !== 'no_trabaja').length
   const interesados = f.filter((x) => x.interes_posgrado === 'si')
-  const satisfaccion = n ? f.reduce((a, x) => a + Number(x.satisfaccion), 0) / n : 0
+  const conSatisfaccion = f.filter((x) => PUNTAJE_ACUERDO[String(x.satisfaccion_carrera)])
+  const satisfaccion = conSatisfaccion.length
+    ? conSatisfaccion.reduce((a, x) => a + PUNTAJE_ACUERDO[String(x.satisfaccion_carrera)], 0) / conSatisfaccion.length
+    : 0
 
   const situacion = contar(f, 'situacion_laboral', [
     ['trabaja', 'Trabaja en una organización'], ['no_trabaja', 'No trabaja actualmente'], ['emprende', 'Emprendimiento propio']])
@@ -310,12 +218,8 @@ function resumenEmpleadores(f: Fila[], totalSinFiltros: number): DatosResumen {
   }
 }
 
-/** Cantidad de respuestas ficticias de cada encuesta (para la etiqueta "Demostración"). */
-export const totalDemo = (encuesta: SlugEncuesta) => DEMO[encuesta].length
-
-/** Resumen calculado sobre los datos ficticios, aplicando los filtros elegidos. */
-export function resumenDemo(encuesta: SlugEncuesta, filtros: Record<string, string>): DatosResumen {
-  const todas = DEMO[encuesta]
+/** Resumen de `todas` las respuestas (ya filtradas por origen), aplicando los filtros elegidos. */
+export function calcularResumen(encuesta: SlugEncuesta, todas: Fila[], filtros: Record<string, string>): DatosResumen {
   const filas = todas.filter((x) => Object.entries(filtros).every(([c, v]) => !v || x[c] === v))
   return encuesta === 'titulados'
     ? resumenTitulados(filas, todas.length)

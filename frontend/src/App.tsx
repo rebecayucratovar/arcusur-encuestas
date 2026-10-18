@@ -4,6 +4,7 @@ import SeccionPendiente from './components/admin/SeccionPendiente'
 import { IconoFlechaIzq } from './components/Iconos'
 import RutaAdmin from './components/RutaAdmin'
 import SesionProvider from './components/SesionProvider'
+import Analisis from './pages/Analisis'
 import Dashboard from './pages/Dashboard'
 import EncuestaEmpleadores from './pages/EncuestaEmpleadores'
 import EncuestaTitulados from './pages/EncuestaTitulados'
@@ -39,8 +40,7 @@ export default function App() {
             <Route path="respuestas" element={<Respuestas />} />
             <Route path="datos" element={
               <SeccionPendiente titulo="Datos" descripcion="Importación de CSV/Excel y exportación de resultados." />} />
-            <Route path="analisis" element={
-              <SeccionPendiente titulo="Análisis" descripcion="Estadística descriptiva, tablas cruzadas y pruebas χ²." />} />
+            <Route path="analisis" element={<Analisis />} />
             <Route path="escenarios" element={
               <SeccionPendiente titulo="Escenarios" descripcion="Simulación de escenarios para la toma de decisiones." />} />
             <Route path="comparacion" element={

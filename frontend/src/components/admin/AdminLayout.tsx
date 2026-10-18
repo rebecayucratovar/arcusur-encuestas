@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import type { ContextoAdmin, Resumen, SlugEncuesta } from '../../lib/admin'
+import { ORIGENES, type ContextoAdmin, type Resumen, type SlugEncuesta } from '../../lib/admin'
 import logoUmss from '../../assets/logo-umss.png'
-import { DATOS_DE_DEMOSTRACION, totalDemo } from '../../lib/resumen'
+import { DATOS_DE_DEMOSTRACION } from '../../lib/datos'
+import { TOTAL_DEMO } from '../../lib/demo'
 import { useSesion } from '../../lib/sesion'
 import { fetchAdmin } from '../../services/api'
 import {
@@ -19,11 +20,8 @@ const MENU: { to: string; texto: string; icono: ReactNode }[] = [
   { to: '/admin/comparacion', texto: 'Empleadores vs. Titulados', icono: <IconoComparar /> },
 ]
 
-// Cómo se muestra cada valor de tss_submissions.source.
-const ORIGENES: Record<string, { texto: string; clase: string }> = {
-  public_link: { texto: 'Formulario', clase: 'origen--formulario' },
-  csv_import: { texto: 'CSV', clase: 'origen--csv' },
-}
+// La demostración solo se ofrece mientras el panel use datos ficticios.
+const ORIGENES_DISPONIBLES = ORIGENES.filter((o) => o.valor !== 'demo' || DATOS_DE_DEMOSTRACION)
 
 function iniciales(email: string) {
   return email.slice(0, 2).toUpperCase()
@@ -34,6 +32,10 @@ export default function AdminLayout() {
   const [encuesta, setEncuesta] = useState<SlugEncuesta>('titulados')
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // Orígenes de respuestas que se muestran (filtro de la barra superior; varios a la vez).
+  const [origenes, setOrigenes] = useState<string[]>(() => ORIGENES_DISPONIBLES.map((o) => o.valor))
+  const alternarOrigen = (valor: string) =>
+    setOrigenes((sel) => (sel.includes(valor) ? sel.filter((v) => v !== valor) : [...sel, valor]))
   // Menú lateral en celular (en escritorio siempre está visible).
   const [lateralAbierto, setLateralAbierto] = useState(false)
   const cerrarLateral = () => setLateralAbierto(false)
@@ -57,8 +59,8 @@ export default function AdminLayout() {
       .catch(() => setResumen(null))
   }, [token])
 
-  const porOrigen = resumen?.[encuesta]?.por_origen ?? {}
-  const origenes = { public_link: 0, csv_import: 0, ...porOrigen }
+  const conteo = (valor: string) =>
+    valor === 'demo' ? TOTAL_DEMO[encuesta] : resumen?.[encuesta]?.por_origen[valor] ?? 0
 
   return (
     <div className="admin">
@@ -104,14 +106,20 @@ export default function AdminLayout() {
                 </button>
               ))}
             </div>
-            <span className="admin__rotulo">Origen</span>
-            {Object.entries(origenes).map(([origen, n]) => {
-              const info = ORIGENES[origen] ?? { texto: origen, clase: '' }
-              return <span key={origen} className={`origen ${info.clase}`}>{info.texto} <b>{n}</b></span>
-            })}
-            {DATOS_DE_DEMOSTRACION && (
-              <span className="origen origen--demo">Demostración <b>{totalDemo(encuesta)}</b></span>
-            )}
+            <span className="admin__rotulo" id="rotulo-origen">Origen</span>
+            <div className="origenes" role="group" aria-labelledby="rotulo-origen">
+              {ORIGENES_DISPONIBLES.map((o) => {
+                const activo = origenes.includes(o.valor)
+                return (
+                  <button key={o.valor} type="button" aria-pressed={activo}
+                    className={`origen origen--boton ${o.clase}${activo ? '' : ' origen--inactivo'}`}
+                    title={activo ? `Ocultar respuestas de ${o.texto}` : `Mostrar respuestas de ${o.texto}`}
+                    onClick={() => alternarOrigen(o.valor)}>
+                    {o.texto} <b>{conteo(o.valor)}</b>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div className="usuario">
@@ -140,7 +148,7 @@ export default function AdminLayout() {
         )}
 
         <main className="admin__contenido">
-          <Outlet context={{ encuesta, resumen } satisfies ContextoAdmin} />
+          <Outlet context={{ encuesta, resumen, origenes } satisfies ContextoAdmin} />
         </main>
       </div>
     </div>

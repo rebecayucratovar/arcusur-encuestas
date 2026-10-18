@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
+import EstadoDatos from '../components/admin/EstadoDatos'
 import { IconoBuscar, IconoDescargar } from '../components/Iconos'
-import { useContextoAdmin, type SlugEncuesta } from '../lib/admin'
+import { infoOrigen, useContextoAdmin, type SlugEncuesta } from '../lib/admin'
+import { useDatosEncuesta } from '../lib/datos'
 import { exportarExcel } from '../lib/excel'
 import { exportarTablaCSV } from '../lib/exportar'
 import {
-  COLUMNAS, FILTRO_TABLA, ORIGENES, respuestasDemo, textoCelda, type FilaRespuesta,
+  aFilaRespuesta, COLUMNAS, etiquetasCatalogo, FILTRO_TABLA, textoCelda, type FilaRespuesta,
 } from '../lib/respuestas'
-
-// Por ahora la tabla usa respuestas ficticias. Para conectarla a la base de datos,
-// reemplazar `respuestasDemo(...)` por GET /admin/respuestas/{slug} (ver lib/respuestas.ts).
 
 const POR_PAGINA = 25
 
@@ -24,12 +23,14 @@ const fechaCompleta = (iso: string) => {
 /** Minúsculas y sin tildes, para que "educacion" encuentre "Educación". */
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
+function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: string[] }) {
   const columnas = COLUMNAS[encuesta]
   const filtro = columnas.find((c) => c.codigo === FILTRO_TABLA[encuesta])!
+  const datos = useDatosEncuesta(encuesta, origenes)
+  const catalogo = useMemo(() => etiquetasCatalogo(datos.encuesta), [datos.encuesta])
   const todas = useMemo(
-    () => [...respuestasDemo(encuesta)].sort((a, b) => b.fecha.localeCompare(a.fecha)),
-    [encuesta],
+    () => datos.filas.map(aFilaRespuesta).sort((a, b) => b.fecha.localeCompare(a.fecha)),
+    [datos.filas],
   )
 
   const [busqueda, setBusqueda] = useState('')
@@ -41,10 +42,10 @@ function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
     return todas.filter((f) => {
       if (valorFiltro && String(f.valores[filtro.codigo]) !== valorFiltro) return false
       if (!q) return true
-      const textos = [f.id, ...columnas.map((c) => textoCelda(c, f.valores[c.codigo]))]
+      const textos = [f.id, ...columnas.map((c) => textoCelda(c, f.valores[c.codigo], catalogo))]
       return textos.some((t) => normalizar(t).includes(q))
     })
-  }, [todas, busqueda, valorFiltro, filtro.codigo, columnas])
+  }, [todas, busqueda, valorFiltro, filtro.codigo, columnas, catalogo])
 
   const paginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA))
   const actual = Math.min(pagina, paginas - 1)
@@ -53,8 +54,8 @@ function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
   const tablaExportable = () => [
     ['ID', 'Fecha', 'Origen', ...columnas.map((c) => c.titulo)],
     ...filas.map((f: FilaRespuesta) => [
-      f.id, fechaCompleta(f.fecha), ORIGENES[f.origen]?.texto ?? f.origen,
-      ...columnas.map((c) => textoCelda(c, f.valores[c.codigo])),
+      f.id, fechaCompleta(f.fecha), infoOrigen(f.origen).texto,
+      ...columnas.map((c) => textoCelda(c, f.valores[c.codigo], catalogo)),
     ]),
   ]
   const nombreArchivo = `respuestas-${encuesta}`
@@ -77,6 +78,7 @@ function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
         </div>
       </div>
 
+      <EstadoDatos cargando={datos.cargando} error={datos.error} origenes={origenes} total={todas.length}>
       <section className="tabla-panel">
         <div className="tabla-panel__filtros">
           <label className="filtros__campo filtros__campo--busqueda">
@@ -111,14 +113,14 @@ function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
             </thead>
             <tbody>
               {visibles.map((f) => {
-                const origen = ORIGENES[f.origen] ?? { texto: f.origen, clase: '' }
+                const origen = infoOrigen(f.origen)
                 return (
                   <tr key={f.id}>
                     <th scope="row">{f.id}</th>
                     <td className="tabla-respuestas__fecha">{fechaCorta(f.fecha)}</td>
                     <td><span className={`origen origen--fila ${origen.clase}`}>{origen.texto}</span></td>
                     {columnas.map((c) => {
-                      const t = textoCelda(c, f.valores[c.codigo])
+                      const t = textoCelda(c, f.valores[c.codigo], catalogo)
                       return <td key={c.codigo} className={c.recortar ? 'tabla-respuestas__recortar' : undefined} title={c.recortar ? t : undefined}>{t}</td>
                     })}
                   </tr>
@@ -142,12 +144,13 @@ function Tabla({ encuesta }: { encuesta: SlugEncuesta }) {
           </div>
         )}
       </section>
+      </EstadoDatos>
     </>
   )
 }
 
 export default function Respuestas() {
-  const { encuesta } = useContextoAdmin()
+  const { encuesta, origenes } = useContextoAdmin()
   // key: al cambiar de encuesta se reinician la búsqueda, el filtro y la página.
-  return <Tabla key={encuesta} encuesta={encuesta} />
+  return <Tabla key={encuesta} encuesta={encuesta} origenes={origenes} />
 }
