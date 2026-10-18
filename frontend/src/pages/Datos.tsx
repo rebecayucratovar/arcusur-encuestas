@@ -6,7 +6,7 @@ import { DATOS_DE_DEMOSTRACION, useDatosEncuesta } from '../lib/datos'
 import { archivoEjemplo, TOTAL_DEMO, type Contacto } from '../lib/demo'
 import { exportarTablaCSV } from '../lib/exportar'
 import {
-  FECHA, importar, leerCsv, mapearColumnas, nombresPreguntas, preguntasImportables, revisar,
+  FECHA, importar, leerCsv, mapearColumnas, nombresPreguntas, preguntasImportables, revisar, textoFilas,
   type ColumnaCsv, type EstadoColumna, type ResultadoImportacion,
 } from '../lib/importacion'
 import { useSesion } from '../lib/sesion'
@@ -199,11 +199,13 @@ function Importador({ encuesta, slug }: { encuesta: Survey; slug: string }) {
           {vista.problemas.length === 0 ? <p className="analisis__nota">Ninguno.</p> : (
             <ul className="problemas">
               {vista.problemas.map((p, i) => (
-                <li key={i} className={`problema problema--${p.tipo}`}>{p.fila !== null && <b>Fila {p.fila}: </b>}{p.texto}</li>
+                <li key={i} className={`problema problema--${p.tipo}`} title={p.filas.length > 4 ? `Filas ${p.filas.join(', ')}` : undefined}>
+                  {p.filas.length > 0 && <b>{textoFilas(p.filas)}: </b>}{p.texto}
+                </li>
               ))}
             </ul>
           )}
-          <p className="analisis__nota">Las filas se numeran como en Excel (la 1 es el encabezado). Los atípicos se conservan; solo se señalan.</p>
+          <p className="analisis__nota">Las filas se numeran como en Excel (la 1 es el encabezado). Un valor inválido se anula sin perder el resto de la fila; solo se descartan filas repetidas o vacías.</p>
           <button type="button" className="boton importacion__boton" onClick={enviar} disabled={importando || vista.validas.length === 0}>
             {importando ? 'Importando…' : `Importar ${vista.validas.length} ${vista.validas.length === 1 ? 'fila válida' : 'filas válidas'}`}
           </button>

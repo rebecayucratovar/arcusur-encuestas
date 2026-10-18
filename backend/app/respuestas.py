@@ -64,7 +64,7 @@ def _borrar_envio(submission_id):
     supabase.table("tss_submissions").delete().eq("id", submission_id).execute()
 
 
-def guardar_respuesta(slug, respuestas, source=None, encuesta=None, submitted_at=None):
+def guardar_respuesta(slug, respuestas, source=None, encuesta=None, submitted_at=None, importado=False):
     """Valida y guarda un envío completo. Devuelve el id de tss_submissions.
 
     - `encuesta`: la encuesta ya cargada (el importador la pasa para no
@@ -73,10 +73,12 @@ def guardar_respuesta(slug, respuestas, source=None, encuesta=None, submitted_at
     - `submitted_at`: fecha original del envío (datetime), p. ej. la columna
       "Hora de finalización" del CSV. Si es None, la BD pone la hora actual.
       Sin zona horaria se asume la de Bolivia (UTC-4).
+    - `importado`: True para filas de CSV (ver `validar`); el importador lo usa
+      junto con source="csv_import".
     Lanza RespuestaInvalida o EncuestaNoEncontrada.
     """
     encuesta = encuesta or cargar_encuesta(slug)
-    limpias, errores = validar(encuesta, respuestas)
+    limpias, errores = validar(encuesta, respuestas, importado)
     if errores:
         raise RespuestaInvalida(errores)
     answers, elecciones, contacto = construir_filas(encuesta, limpias)
