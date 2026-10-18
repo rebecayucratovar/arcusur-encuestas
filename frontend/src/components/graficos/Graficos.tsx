@@ -6,7 +6,7 @@ const porcentaje = (v: number, t: number) =>
   `${(t ? (v / t) * 100 : 0).toLocaleString('es-BO', { maximumFractionDigits: 0 })}%`
 
 /** Colores categóricos en orden fijo (validados para daltonismo y contraste). */
-const SERIES = ['var(--serie-1)', 'var(--serie-2)', 'var(--serie-3)']
+const SERIES = ['var(--serie-1)', 'var(--serie-2)', 'var(--serie-3)', 'var(--serie-4)']
 
 interface Punto { x: number; y: number; d: Categoria }
 
@@ -41,7 +41,7 @@ function useTooltip() {
   return { caja, punto, props }
 }
 
-export function Dona({ datos }: { datos: Categoria[] }) {
+export function Dona({ datos, unidad = 'respuestas' }: { datos: Categoria[]; unidad?: string }) {
   const [activo, setActivo] = useState<number | null>(null)
   const t = total(datos)
   const r = 62
@@ -73,7 +73,7 @@ export function Dona({ datos }: { datos: Categoria[] }) {
           {centro ? porcentaje(centro.valor, t) : t}
         </text>
         <text x="80" y="96" textAnchor="middle" className="dona__rotulo">
-          {centro ? `${centro.valor} respuestas` : 'respuestas'}
+          {centro ? `${centro.valor} ${unidad}` : unidad}
         </text>
       </svg>
       <ul className="leyenda">

@@ -6,6 +6,9 @@
 
 import type { SlugEncuesta } from './admin'
 
+/** Mientras sea true, el Resumen muestra datos ficticios y el aviso de demostración. */
+export const DATOS_DE_DEMOSTRACION = true
+
 export interface Categoria {
   clave: string
   etiqueta: string
@@ -28,12 +31,15 @@ export interface Grafico {
   datos: Categoria[]
   /** Lectura en una frase, para el Comité. */
   hallazgo: string
-  ancho?: boolean
+  /** Ancho de la tarjeta: normal = 1/3, ancho = 2/3, mitad = 1/2 de la fila. */
+  tamano?: 'normal' | 'ancho' | 'mitad'
   /** Barras: leyenda de lo que significa `destacado`. */
   leyendaDestacado?: [string, string]
 }
 
 export interface DatosResumen {
+  /** Cómo se llama cada respuesta en el conteo ("respuestas", "organizaciones"). */
+  unidad: string
   total: number
   totalSinFiltros: number
   indicadores: Indicador[]
@@ -43,6 +49,8 @@ export interface DatosResumen {
 export interface Filtro {
   codigo: string
   etiqueta: string
+  /** Texto de la opción sin filtro ("Todas" por defecto). */
+  todos?: string
   opciones: { valor: string; etiqueta: string }[]
 }
 
@@ -120,12 +128,12 @@ function generarEmpleadores(n: number): Fila[] {
     tipo_organizacion: elegir(r, { privado: 70, publico: 30 }),
     tamano_organizacion: elegir(r, { grande: 35, mediana: 15, pequena: 20, micro: 30 }),
     rubro: elegir(r, {
-      desarrollo_software: 40, servicios_ti: 8, telecomunicaciones: 9, sector_publico: 7, startups: 8,
-      salud: 6, consultoria: 5, soporte_tecnico: 5, industria: 4, otros: 8,
+      desarrollo_software: 36, telecomunicaciones: 9, banca: 6, sector_publico: 7, educacion: 5, industria: 5,
+      comercio: 4, servicios_ti: 8, startups: 8, salud: 5, consultoria: 4, soporte_tecnico: 3,
     }),
     contrataciones_cinco_anios: elegir(r, { si: 79, no: 21 }),
-    probabilidad_contratar: elegir(r, { alta: 34, depende_crecimiento: 49, no_prevista: 17 }),
-    nivel_formacion: elegir(r, { licenciatura: 70, diplomado: 9, especialidad: 15, maestria: 6 }),
+    probabilidad_contratar: elegir(r, { alta: 34, depende_crecimiento: 49, no_prevista: 14, no_requiere: 3 }),
+    nivel_formacion: elegir(r, { licenciatura: 66, diplomado: 10, especialidad: 15, maestria: 8, doctorado: 1 }),
     perfil_01: elegir(r, { totalmente_acuerdo: 50, parcialmente_acuerdo: 38, totalmente_desacuerdo: 8, no_sabe: 4 }),
   }))
 }
@@ -143,16 +151,16 @@ export const FILTROS: Record<SlugEncuesta, Filtro[]> = {
       { valor: '19_22', etiqueta: '19 - 22 años' }, { valor: '23_26', etiqueta: '23 - 26 años' },
       { valor: '27_30', etiqueta: '27 - 30 años' }, { valor: '31_34', etiqueta: '31 - 34 años' },
       { valor: '35_mas', etiqueta: '35 años o más' }] },
-    { codigo: 'genero', etiqueta: 'Género', opciones: [
+    { codigo: 'genero', etiqueta: 'Género', todos: 'Todos', opciones: [
       { valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }] },
     { codigo: 'situacion_laboral', etiqueta: 'Situación laboral', opciones: [
       { valor: 'trabaja', etiqueta: 'Trabaja en una organización' }, { valor: 'no_trabaja', etiqueta: 'No trabaja' },
       { valor: 'emprende', etiqueta: 'Emprendimiento propio' }] },
   ],
   empleadores: [
-    { codigo: 'tipo_organizacion', etiqueta: 'Tipo de organización', opciones: [
+    { codigo: 'tipo_organizacion', etiqueta: 'Tipo de organización', todos: 'Todos', opciones: [
       { valor: 'publico', etiqueta: 'Público' }, { valor: 'privado', etiqueta: 'Privado' }] },
-    { codigo: 'tamano_organizacion', etiqueta: 'Tamaño', opciones: [
+    { codigo: 'tamano_organizacion', etiqueta: 'Tamaño', todos: 'Todos', opciones: [
       { valor: 'grande', etiqueta: 'Grande (100 o más)' }, { valor: 'mediana', etiqueta: 'Mediana (31 a 99)' },
       { valor: 'pequena', etiqueta: 'Pequeña (11 a 30)' }, { valor: 'micro', etiqueta: 'Micro (hasta 10)' }] },
   ],
@@ -190,6 +198,7 @@ function resumenTitulados(f: Fila[], totalSinFiltros: number): DatosResumen {
   const pctRapidos = pct(tiempo.filter((t) => t.destacado).reduce((a, t) => a + t.valor, 0), conTiempo.length)
 
   return {
+    unidad: 'respuestas',
     total: n,
     totalSinFiltros,
     indicadores: [
@@ -202,12 +211,12 @@ function resumenTitulados(f: Fila[], totalSinFiltros: number): DatosResumen {
       { id: 'situacion', titulo: 'Situación laboral actual', subtitulo: 'Todos los titulados', tipo: 'dona', datos: situacion,
         hallazgo: `El ${sTrab} trabaja en una organización y el ${sEmp} emprende; ${sNo} no trabaja actualmente.` },
       { id: 'areas', titulo: 'Áreas de posgrado de interés', subtitulo: 'Titulados interesados en un posgrado', tipo: 'barras',
-        datos: areas, ancho: true,
+        datos: areas, tamano: 'ancho',
         hallazgo: a1 && a1.valor > 0
           ? `${a1.etiqueta} concentra el mayor interés (${fmtPct(pct(a1.valor, interesados.length))} de los interesados), seguida de ${a2.etiqueta}. Es un insumo directo para priorizar la oferta de posgrado.`
           : 'No hay titulados interesados con los filtros elegidos.' },
       { id: 'remuneracion', titulo: 'Remuneración mensual (Bs.)', subtitulo: 'Titulados que trabajan en una organización',
-        tipo: 'columnas', datos: destacarMayor(remuneracion), ancho: true,
+        tipo: 'columnas', datos: destacarMayor(remuneracion), tamano: 'ancho',
         hallazgo: trabajan.length
           ? `El rango más frecuente es Bs. ${lider(remuneracion).etiqueta}; el ${fmtPct(pct(masDe5000, trabajan.length))} percibe más de Bs. 5.000 mensuales.`
           : 'No hay titulados que trabajen en una organización con los filtros elegidos.' },
@@ -221,55 +230,63 @@ function resumenTitulados(f: Fila[], totalSinFiltros: number): DatosResumen {
 function resumenEmpleadores(f: Fila[], totalSinFiltros: number): DatosResumen {
   const n = f.length
   const contrataron = f.filter((x) => x.contrataciones_cinco_anios === 'si').length
+  const confianTotal = f.filter((x) => x.perfil_01 === 'totalmente_acuerdo').length
 
-  const probabilidad = contar(f, 'probabilidad_contratar', [
-    ['alta', 'Alta probabilidad'], ['depende_crecimiento', 'Depende del crecimiento'], ['no_prevista', 'No prevista']])
+  const tamano = contar(f, 'tamano_organizacion', [
+    ['grande', 'Grande'], ['mediana', 'Mediana'], ['pequena', 'Pequeña'], ['micro', 'Micro']])
+  const tamanoLider = lider(tamano)
 
-  const opinan = f.filter((x) => x.perfil_01 !== 'no_sabe')
-  const confian = opinan.filter((x) => x.perfil_01 !== 'totalmente_desacuerdo').length
-
-  // Rubros: los 6 más frecuentes y el resto agrupado en "Otros".
+  // Los siete rubros más frecuentes (sin resaltar: es una sola serie).
   const rubros = contar(f, 'rubro', [
-    ['desarrollo_software', 'Desarrollo de software'], ['telecomunicaciones', 'Telecomunicaciones y redes'],
-    ['servicios_ti', 'Servicios de TI'], ['startups', 'Startups'], ['sector_publico', 'Instituciones públicas'],
-    ['salud', 'Salud'], ['consultoria', 'Consultoría'], ['soporte_tecnico', 'Soporte técnico'],
-    ['industria', 'Industria'], ['otros', 'Otros']]).sort((a, b) => b.valor - a.valor)
-  const principales = rubros.filter((r) => r.clave !== 'otros').slice(0, 6)
-  const resto = rubros.filter((r) => !principales.includes(r)).reduce((a, r) => a + r.valor, 0)
-  const rubrosFinal = destacarMayor([...principales, { clave: 'otros', etiqueta: 'Otros', valor: resto }])
+    ['desarrollo_software', 'Desarrollo de software'], ['servicios_ti', 'Servicios de TI'],
+    ['telecomunicaciones', 'Telecomunicaciones y redes'], ['soporte_tecnico', 'Soporte técnico y mantenimiento'],
+    ['consultoria', 'Consultoría / transformación digital'], ['banca', 'Banca y servicios financieros'],
+    ['sector_publico', 'Instituciones públicas / gobierno'], ['educacion', 'Educación e investigación'],
+    ['industria', 'Industria y manufactura'], ['comercio', 'Comercio y comercio electrónico'], ['salud', 'Salud'],
+    ['ciberseguridad', 'Seguridad informática'], ['datos_bi', 'Análisis de datos / BI'],
+    ['startups', 'Startups o emprendimientos'], ['otros', 'Otros']])
+    .sort((a, b) => b.valor - a.valor).slice(0, 7)
+
+  // "destacado" = prevé contratar (alta o según crecimiento).
+  const perspectiva = contar(f, 'probabilidad_contratar', [
+    ['alta', 'Alta probabilidad'], ['depende_crecimiento', 'Según crecimiento'],
+    ['no_prevista', 'No prevista'], ['no_requiere', 'No requiere']])
+    .map((p) => ({ ...p, destacado: p.clave === 'alta' || p.clave === 'depende_crecimiento' }))
+  const preven = perspectiva.filter((p) => p.destacado).reduce((a, p) => a + p.valor, 0)
 
   const nivel = destacarMayor(contar(f, 'nivel_formacion', [
-    ['licenciatura', 'Licenciatura'], ['diplomado', 'Diplomado'], ['especialidad', 'Especialidad'], ['maestria', 'Maestría']]))
-
-  const tamano = destacarMayor(contar(f, 'tamano_organizacion', [
-    ['grande', 'Grande'], ['mediana', 'Mediana'], ['pequena', 'Pequeña'], ['micro', 'Micro']]))
-
-  const [pAlta, pDepende, pNo] = probabilidad.map((p) => fmtPct(pct(p.valor, n)))
+    ['licenciatura', 'Licenciatura'], ['diplomado', 'Diplomado'], ['especialidad', 'Especialidad'],
+    ['maestria', 'Maestría'], ['doctorado', 'Doctorado'], ['posdoctorado', 'Post-doctorado']]))
+  const soloLicenciatura = nivel[0].valor
 
   return {
+    unidad: 'organizaciones',
     total: n,
     totalSinFiltros,
     indicadores: [
-      { titulo: 'Total de respuestas', valor: String(n), detalle: 'Organizaciones que respondieron' },
-      { titulo: 'Contrataron titulados', valor: fmtPct(pct(contrataron, n)), detalle: 'En los últimos 5 años' },
-      { titulo: 'Alta probabilidad de contratar', valor: pAlta, detalle: 'En los próximos años' },
-      { titulo: 'Confianza en la Carrera', valor: fmtPct(pct(confian, opinan.length)), detalle: 'Total o parcialmente de acuerdo (sin "No sabe")' },
+      { titulo: 'Prevé contratar Ing. de Sistemas', valor: fmtPct(pct(preven, n)), detalle: 'Alta probabilidad o según crecimiento (P6)' },
+      { titulo: 'Organizaciones encuestadas', valor: String(n), detalle: 'Empleadores que respondieron' },
+      { titulo: 'Contrató en los últimos 5 años', valor: fmtPct(pct(contrataron, n)), detalle: 'Respondió SI a la pregunta 5' },
+      { titulo: 'Confianza institucional', valor: fmtPct(pct(confianTotal, n)), detalle: 'Totalmente de acuerdo: la Carrera brinda confianza' },
     ],
     graficos: [
-      { id: 'probabilidad', titulo: 'Posibilidad de contratar', subtitulo: 'Ingenieros de Sistemas en los próximos años',
-        tipo: 'dona', datos: probabilidad,
-        hallazgo: `El ${pAlta} prevé contratar con alta probabilidad y el ${pDepende} según su crecimiento; ${pNo} no lo tiene previsto.` },
-      { id: 'rubro', titulo: 'Rubro de las organizaciones', subtitulo: 'Sector principal donde trabajan los titulados',
-        tipo: 'barras', datos: rubrosFinal, ancho: true,
-        hallazgo: n ? `${lider(rubrosFinal).etiqueta} es el rubro con más empleadores (${fmtPct(pct(lider(rubrosFinal).valor, n))}).` : 'Sin respuestas con los filtros elegidos.' },
-      { id: 'nivel', titulo: 'Nivel de formación demandado', subtitulo: 'Para contratar nuevos profesionales del área',
-        tipo: 'columnas', datos: nivel, ancho: true,
-        hallazgo: n ? `El ${fmtPct(pct(lider(nivel).valor, n))} solicita ${lider(nivel).etiqueta.toLowerCase()}; los posgrados aún son un requisito minoritario.` : 'Sin respuestas con los filtros elegidos.' },
-      { id: 'tamano', titulo: 'Tamaño de la organización', subtitulo: 'Cantidad de funcionarios', tipo: 'barras', datos: tamano,
-        hallazgo: n ? `Predominan las organizaciones de tamaño ${lider(tamano).etiqueta.toLowerCase()} (${fmtPct(pct(lider(tamano).valor, n))}).` : 'Sin respuestas con los filtros elegidos.' },
+      { id: 'tamano', titulo: 'Tamaño de la organización', subtitulo: 'Cantidad de funcionarios (P3)', tipo: 'dona', datos: tamano,
+        hallazgo: `Las organizaciones de tamaño ${tamanoLider.etiqueta.toLowerCase()} representan el ${fmtPct(pct(tamanoLider.valor, n))} de la muestra de empleadores.` },
+      { id: 'rubro', titulo: 'Rubro principal de la organización', subtitulo: 'Siete rubros más frecuentes (P4)', tipo: 'barras',
+        datos: rubros, tamano: 'ancho',
+        hallazgo: `${rubros[0].etiqueta} es el rubro con más empleadores encuestados (${rubros[0].valor}).` },
+      { id: 'perspectiva', titulo: 'Perspectiva de contratación', subtitulo: 'Próximos años (P6)', tipo: 'barras',
+        datos: perspectiva, tamano: 'mitad', leyendaDestacado: ['Prevé contratar', 'No prevé'],
+        hallazgo: `El ${fmtPct(pct(preven, n))} de los empleadores prevé incorporar Ingenieros de Sistemas, de forma segura o condicionada al crecimiento.` },
+      { id: 'nivel', titulo: 'Nivel de formación demandado', subtitulo: 'Para contratar nuevos profesionales (P7)', tipo: 'columnas',
+        datos: nivel, tamano: 'mitad',
+        hallazgo: `La licenciatura basta para el ${fmtPct(pct(soloLicenciatura, n))}; un ${fmtPct(pct(n - soloLicenciatura, n))} demanda alguna formación de posgrado.` },
     ],
   }
 }
+
+/** Cantidad de respuestas ficticias de cada encuesta (para la etiqueta "Demostración"). */
+export const totalDemo = (encuesta: SlugEncuesta) => DEMO[encuesta].length
 
 /** Resumen calculado sobre los datos ficticios, aplicando los filtros elegidos. */
 export function resumenDemo(encuesta: SlugEncuesta, filtros: Record<string, string>): DatosResumen {

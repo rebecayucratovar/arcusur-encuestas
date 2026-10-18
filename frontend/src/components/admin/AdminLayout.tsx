@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import type { ContextoAdmin, Resumen, SlugEncuesta } from '../../lib/admin'
 import logoUmss from '../../assets/logo-umss.png'
+import { DATOS_DE_DEMOSTRACION, totalDemo } from '../../lib/resumen'
 import { useSesion } from '../../lib/sesion'
 import { fetchAdmin } from '../../services/api'
 import {
@@ -108,6 +109,9 @@ export default function AdminLayout() {
               const info = ORIGENES[origen] ?? { texto: origen, clase: '' }
               return <span key={origen} className={`origen ${info.clase}`}>{info.texto} <b>{n}</b></span>
             })}
+            {DATOS_DE_DEMOSTRACION && (
+              <span className="origen origen--demo">Demostración <b>{totalDemo(encuesta)}</b></span>
+            )}
           </div>
 
           <div className="usuario">

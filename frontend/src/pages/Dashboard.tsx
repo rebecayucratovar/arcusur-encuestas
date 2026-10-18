@@ -4,17 +4,17 @@ import { Barras, Columnas, Dona, TablaDatos } from '../components/graficos/Grafi
 import { IconoAlerta, IconoDescargar, IconoIdea, IconoTabla } from '../components/Iconos'
 import { useContextoAdmin, type SlugEncuesta } from '../lib/admin'
 import { exportarCSV } from '../lib/exportar'
-import { FILTROS, resumenDemo, type Grafico } from '../lib/resumen'
+import { DATOS_DE_DEMOSTRACION, FILTROS, resumenDemo, type Grafico } from '../lib/resumen'
 
 // Por ahora el Resumen usa datos ficticios. Para conectarlo a la base de datos,
 // reemplazar `resumenDemo(...)` por una llamada a GET /admin/resumen/{slug}
-// que devuelva un `DatosResumen` (ver lib/resumen.ts).
-const DATOS_DE_DEMOSTRACION = true
+// que devuelva un `DatosResumen` (ver lib/resumen.ts) y poner
+// DATOS_DE_DEMOSTRACION = false en ese archivo.
 
-function TarjetaGrafico({ g }: { g: Grafico }) {
+function TarjetaGrafico({ g, unidad }: { g: Grafico; unidad: string }) {
   const [verTabla, setVerTabla] = useState(false)
   return (
-    <section className={`grafico${g.ancho ? ' grafico--ancho' : ''}`}>
+    <section className={`grafico grafico--${g.tamano ?? 'normal'}`}>
       <header className="grafico__cabecera">
         <div>
           <h2>{g.titulo}</h2>
@@ -31,7 +31,7 @@ function TarjetaGrafico({ g }: { g: Grafico }) {
       </header>
       <div className="grafico__cuerpo">
         {verTabla ? <TablaDatos datos={g.datos} />
-          : g.tipo === 'dona' ? <Dona datos={g.datos} />
+          : g.tipo === 'dona' ? <Dona datos={g.datos} unidad={unidad} />
             : g.tipo === 'columnas' ? <Columnas datos={g.datos} />
               : <Barras datos={g.datos} leyenda={g.leyendaDestacado} />}
       </div>
@@ -51,7 +51,7 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
         <p>
           {encuesta === 'titulados'
             ? 'Indicadores clave de empleabilidad, satisfacción e interés en posgrado de los titulados.'
-            : 'Percepción del sector empleador sobre la demanda y la formación de los titulados.'}
+            : 'Indicadores clave de contratación y valoración de la Carrera por parte de los empleadores.'}
         </p>
       </div>
 
@@ -61,7 +61,7 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
             <span>{f.etiqueta}</span>
             <select className="campo campo--select" value={filtros[f.codigo] ?? ''}
               onChange={(e) => setFiltros((x) => ({ ...x, [f.codigo]: e.target.value }))}>
-              <option value="">{f.codigo === 'genero' ? 'Todos' : 'Todas'}</option>
+              <option value="">{f.todos ?? 'Todas'}</option>
               {f.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
             </select>
           </label>
@@ -69,7 +69,7 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
         {Object.values(filtros).some(Boolean) && (
           <button type="button" className="boton-chico" onClick={() => setFiltros({})}>Limpiar filtros</button>
         )}
-        <span className="filtros__conteo">{datos.total} de {datos.totalSinFiltros} respuestas</span>
+        <span className="filtros__conteo">{datos.total} de {datos.totalSinFiltros} {datos.unidad}</span>
       </div>
 
       {datos.total === 0 ? (
@@ -86,7 +86,7 @@ function Resumen({ encuesta }: { encuesta: SlugEncuesta }) {
             ))}
           </div>
           <div className="graficos">
-            {datos.graficos.map((g) => <TarjetaGrafico key={g.id} g={g} />)}
+            {datos.graficos.map((g) => <TarjetaGrafico key={g.id} g={g} unidad={datos.unidad} />)}
           </div>
         </>
       )}

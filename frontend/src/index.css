@@ -16,6 +16,7 @@
   --serie-1: #3563b0;
   --serie-2: #c8243b;
   --serie-3: #2a9d8f;
+  --serie-4: #c27c0e;
   --barra: #14213d;
   --barra-claro: #7d8aa3;
 
@@ -237,6 +238,7 @@ textarea.campo { resize: vertical; }
 .origen b { color: var(--texto-suave); font-weight: 500; }
 .origen--formulario::before { background: #16a34a; }
 .origen--csv::before { background: #0ea5e9; }
+.origen--demo::before { background: #f59e0b; }
 
 .usuario { position: relative; }
 .usuario__boton { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border: 0; border-radius: 8px; background: none; cursor: pointer; text-align: left; }
@@ -311,9 +313,11 @@ textarea.campo { resize: vertical; }
 .boton-chico:hover { background: var(--fondo); }
 .boton-chico[aria-pressed="true"] { border-color: var(--marino-claro); background: var(--fondo); }
 
-.graficos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
-.grafico { display: flex; flex-direction: column; grid-column: span 1; padding: 20px; border-radius: 14px; background: var(--blanco); box-shadow: var(--sombra); min-width: 0; }
-.grafico--ancho { grid-column: span 2; }
+.graficos { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.grafico { display: flex; flex-direction: column; padding: 20px; border-radius: 14px; background: var(--blanco); box-shadow: var(--sombra); min-width: 0; }
+.grafico--normal { grid-column: span 2; }
+.grafico--ancho { grid-column: span 4; }
+.grafico--mitad { grid-column: span 3; }
 .grafico__cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
 .grafico__cabecera h2 { color: var(--marino); font-size: 16px; font-weight: 600; }
 .grafico__cabecera p { margin-top: 2px; color: var(--texto-suave); font-size: 13px; }
@@ -369,12 +373,13 @@ textarea.campo { resize: vertical; }
 
 @media (max-width: 1100px) {
   .graficos { grid-template-columns: 1fr 1fr; }
+  .grafico--normal, .grafico--mitad { grid-column: span 1; }
   .grafico--ancho { grid-column: span 2; }
 }
 @media (max-width: 960px) {
   .aviso-demo { margin: -20px -16px 20px; padding: 12px 16px; }
   .graficos { grid-template-columns: 1fr; }
-  .grafico--ancho { grid-column: span 1; }
+  .grafico--normal, .grafico--ancho, .grafico--mitad { grid-column: span 1; }
   .filtros__campo { flex: 1 1 140px; }
   .filtros__campo .campo { min-width: 0; }
   .filtros__conteo { margin-left: 0; width: 100%; }
