@@ -56,8 +56,9 @@ export interface ColumnaCsv {
   estado: EstadoColumna
 }
 
-const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  .replace(/^\s*\d+\s*[).-]\s*/, '').replace(/[^a-z0-9ñ]+/g, ' ').trim()
+/** Minúsculas, sin tildes ni signos, sin numeración inicial ("12) ", ".¿"). */
+const normalizar = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+  .replace(/^[^a-z0-9]*\d+\s*[).-]\s*/, '').replace(/[^a-z0-9]+/g, ' ').trim()
 
 const METADATOS: Record<string, { origen: string; fecha?: boolean }> = {
   'id': { origen: 'Microsoft Forms' },
@@ -66,23 +67,39 @@ const METADATOS: Record<string, { origen: string; fecha?: boolean }> = {
   'hora de la ultima modificacion': { origen: 'Microsoft Forms' },
   'correo electronico': { origen: 'Microsoft Forms' },
   'nombre': { origen: 'Microsoft Forms' },
+  'total de puntos': { origen: 'Microsoft Forms' },
+  'comentarios del cuestionario': { origen: 'Microsoft Forms' },
+  'hora de publicacion de la calificacion': { origen: 'Microsoft Forms' },
   'marca temporal': { origen: 'Google Forms', fecha: true },
   'direccion de correo electronico': { origen: 'Google Forms' },
   'puntuacion': { origen: 'Google Forms' },
 }
 
-/** Preguntas a las que se puede asignar una columna (los "Otro" van en la misma celda que la opción). */
-export const preguntasImportables = (encuesta: Survey) =>
-  encuesta.sections.flatMap((s) => s.questions).filter((q) => !q.configuration.other_for)
+function metadato(encabezado: string): { texto: string; fecha?: boolean } | null {
+  const n = normalizar(encabezado)
+  const fijo = METADATOS[n]
+  if (fijo) return { texto: `Metadato de ${fijo.origen}`, fecha: fijo.fecha }
+  // Formularios en modo cuestionario: cada pregunta trae "Puntos: …" y "Comentarios: …".
+  if (/^(puntos|comentarios) /.test(n)) return { texto: 'Puntaje de Microsoft Forms (modo cuestionario)' }
+  if (/^column ?\d*$/.test(n)) return { texto: 'Columna auxiliar de Excel' }
+  return null
+}
 
-/** "P12 · Años de vida profesional", o "Contacto · Email" para los datos de contacto. */
+/** Preguntas a las que se puede asignar una columna (incluye los campos "Otro"). */
+export const preguntasImportables = (encuesta: Survey) => encuesta.sections.flatMap((s) => s.questions)
+
+/** "P12 · Años de vida profesional", "P20 · Rubro (Otro)" o "Contacto · Email". */
 export function nombresPreguntas(encuesta: Survey): Record<string, string> {
   const mapa: Record<string, string> = {}
   for (const v of variables(encuesta)) mapa[v.codigo] = v.etiqueta
-  for (const q of encuesta.sections.flatMap((s) => s.questions)) {
+  const todas = encuesta.sections.flatMap((s) => s.questions)
+  for (const q of todas) {
     if (mapa[q.code]) continue
     const texto = q.prompt.replace(/^\d+\)\s*/, '').replace(/:$/, '')
-    mapa[q.code] = q.configuration.store === 'contact' ? `Contacto · ${texto}` : texto.length > 46 ? `${texto.slice(0, 45)}…` : texto
+    const padre = q.configuration.other_for
+    mapa[q.code] = padre ? `${mapa[padre] ?? padre} (Otro)`
+      : q.configuration.store === 'contact' ? `Contacto · ${texto}`
+        : texto.length > 46 ? `${texto.slice(0, 45)}…` : texto
   }
   return mapa
 }
@@ -101,18 +118,19 @@ function parecido(a: string, b: string): number {
 /** Propone a qué pregunta corresponde cada encabezado. */
 export function mapearColumnas(encuesta: Survey, encabezados: string[]): ColumnaCsv[] {
   const preguntas = preguntasImportables(encuesta).map((q) => ({ q, n: normalizar(q.prompt) }))
+  let hayFecha = false
   const columnas: ColumnaCsv[] = encabezados.map((encabezado, indice) => {
-    const meta = METADATOS[normalizar(encabezado)]
+    const meta = metadato(encabezado)
+    const esFecha = !!meta?.fecha && !hayFecha
+    if (esFecha) hayFecha = true
     return {
-      indice, encabezado, metadato: meta ? `Metadato de ${meta.origen}` : null,
-      destino: meta?.fecha ? FECHA : null, estado: meta?.fecha ? 'coincide' : 'sin_mapear',
+      indice, encabezado, metadato: meta?.texto ?? null,
+      destino: esFecha ? FECHA : null, estado: esFecha ? 'coincide' : 'sin_mapear',
     }
   })
-  if (columnas.filter((c) => c.destino === FECHA).length > 1) {
-    columnas.filter((c) => c.destino === FECHA).slice(1).forEach((c) => { c.destino = null; c.estado = 'sin_mapear' })
-  }
 
-  // Todos los pares columna–pregunta, del más parecido al menos; cada pregunta se usa una vez.
+  // Pares columna–pregunta del más parecido al menos; cada pregunta se usa una vez. El orden
+  // es estable: con encabezados repetidos ("Otra asignatura:") gana la columna anterior.
   const pares = columnas.filter((c) => !c.metadato).flatMap((c) => {
     const n = normalizar(c.encabezado)
     return preguntas.map(({ q, n: p }) => ({ c, q, puntaje: parecido(n, p) }))
@@ -170,7 +188,10 @@ function aIso(texto: string, orden: OrdenFecha): string | null {
 
 export interface Envio { fila: number; submitted_at: string | null; answers: Answers }
 
-export interface Problema { fila: number | null; texto: string; tipo: 'aviso' | 'anulado' | 'descartada' | 'atipico' }
+export type TipoProblema = 'descartada' | 'anulado' | 'corregido' | 'aviso' | 'atipico'
+
+/** Un problema y las filas donde aparece (los repetidos se agrupan en un solo aviso). */
+export interface Problema { tipo: TipoProblema; texto: string; filas: number[] }
 
 export interface VistaPrevia {
   filasLeidas: number
@@ -180,42 +201,94 @@ export interface VistaPrevia {
   problemas: Problema[]
 }
 
+/** "Fila 6", "Filas 6, 9 y 12", "Filas 6, 9, 12, 15 y 40 más". */
+export function textoFilas(filas: number[]): string {
+  if (filas.length === 1) return `Fila ${filas[0]}`
+  if (filas.length <= 4) return `Filas ${filas.slice(0, -1).join(', ')} y ${filas[filas.length - 1]}`
+  return `Filas ${filas.slice(0, 4).join(', ')} y ${filas.length - 4} más`
+}
+
+const ORDEN_TIPOS: TipoProblema[] = ['descartada', 'anulado', 'corregido', 'aviso', 'atipico']
+
+class Problemas {
+  private grupos = new Map<string, Problema>()
+  /** `clave` agrupa: el mismo problema en otra fila se suma al aviso existente. */
+  agregar(tipo: TipoProblema, clave: string, texto: string, fila?: number) {
+    const g = this.grupos.get(`${tipo}|${clave}`) ?? { tipo, texto, filas: [] }
+    if (fila !== undefined) g.filas.push(fila)
+    this.grupos.set(`${tipo}|${clave}`, g)
+  }
+  lista(): Problema[] {
+    return [...this.grupos.values()].sort((a, b) =>
+      ORDEN_TIPOS.indexOf(a.tipo) - ORDEN_TIPOS.indexOf(b.tipo) || (a.filas[0] ?? 0) - (b.filas[0] ?? 0))
+  }
+}
+
 const cortar = (s: string, n = 30) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 
-/** Convierte una celda al valor que espera el backend; `error` si no es válido. */
-function convertir(q: Question, celda: string, answers: Answers): { valor?: string | string[]; error?: string } {
+/** Respuestas de relleno en campos de texto ("-", ".", "N/a", "ninguno"). */
+const RELLENO = /^(n ?a|na|s ?n|x+|no|nada|ninguno|ninguna|ningun|no tengo|sin respuesta|prefiero no responder)$/
+
+/** "2 años" → 2, "1.5" → 1, "6 meses" → 0, "ninguno" → 0; null si no hay un número. */
+function interpretarEntero(texto: string): number | null {
+  const n = normalizar(texto)
+  if (/^\d+$/.test(texto.trim())) return Number(texto.trim())
+  if (/^(ninguno|ninguna|nada|cero)\b/.test(n)) return 0
+  const m = texto.trim().toLowerCase().match(/^(?:unos?\s+|aprox\.?\s*)?(\d+(?:[.,]\d+)?)\s*(meses|mes)?/)
+  if (!m) return null
+  const valor = Number(m[1].replace(',', '.'))
+  return Math.floor(m[2] ? valor / 12 : valor)
+}
+
+interface Conversion { valor?: string | string[]; error?: string; nota?: string }
+
+/** Convierte una celda al valor que espera el backend. */
+function convertir(q: Question, celda: string, answers: Answers): Conversion {
   const texto = celda.trim()
   const cfg = q.configuration
   if (q.options.length) {
     const porTexto = new Map(q.options.flatMap((o) => [[normalizar(o.label), o.value], [normalizar(o.value), o.value]]))
     const directa = porTexto.get(normalizar(texto))
-    if (q.question_type !== 'multiple_choice') {
-      if (directa) return { valor: directa }
-      if (cfg.other_question) { answers[cfg.other_question] = texto; return {} }
-      return { error: `"${cortar(texto)}" no coincide con las opciones` }
-    }
-    // Selección múltiple: MS Forms separa con ";" y Google Forms con ", " (y las
-    // opciones pueden tener comas), así que se buscan las etiquetas dentro del texto.
+    if (directa && q.question_type !== 'multiple_choice') return { valor: directa }
+    // Busca las etiquetas dentro del texto: MS Forms separa con ";" (o '["A","B"]'),
+    // Google Forms con ", ", y algunas opciones llevan comas.
     let resto = ` ${normalizar(texto)} `
     const elegidas: string[] = []
     for (const o of [...q.options].sort((a, b) => b.label.length - a.label.length)) {
       const n = ` ${normalizar(o.label)} `
       if (n.trim() && resto.includes(n)) { elegidas.push(o.value); resto = resto.replace(n, ' ') }
     }
-    if (resto.trim()) {
-      const otro = texto.split(/;/).map((x) => x.trim()).filter((x) => x && !porTexto.has(normalizar(x))).join('; ')
-      if (cfg.other_question) answers[cfg.other_question] = otro || resto.trim()
+    const sobra = resto.trim()
+    if (q.question_type !== 'multiple_choice') {
+      if (elegidas.length && !sobra) {
+        // Versión anterior del formulario con varias opciones en una pregunta de una sola.
+        const n = normalizar(texto)
+        const posicion = (v: string) => n.indexOf(normalizar(q.options.find((o) => o.value === v)!.label))
+        const escrita = [...elegidas].sort((x, y) => posicion(x) - posicion(y))[0]
+        return { valor: escrita, nota: elegidas.length > 1 ? 'varias opciones en una pregunta de una sola; se conservó la primera' : undefined }
+      }
+      if (cfg.other_question) { answers[cfg.other_question] = texto; return { nota: 'texto que no es una opción; se guardó como "Otro"' } }
+      return { error: `"${cortar(texto)}" no coincide con las opciones` }
+    }
+    if (sobra) {
+      if (cfg.other_question) answers[cfg.other_question] = texto.split(';').map((x) => x.trim())
+        .filter((x) => x && !porTexto.has(normalizar(x))).join('; ') || sobra
       else if (!elegidas.length) return { error: `"${cortar(texto)}" no coincide con las opciones` }
     }
-    return elegidas.length ? { valor: elegidas } : {}
+    const n = normalizar(texto)
+    const posicion = (v: string) => n.indexOf(normalizar(q.options.find((o) => o.value === v)!.label))
+    return elegidas.length ? { valor: elegidas.sort((x, y) => posicion(x) - posicion(y)) } : {}
   }
   if (cfg.input === 'integer') {
-    if (!/^\d+$/.test(texto)) return { error: `"${cortar(texto)}" no es un número entero` }
-    const n = Number(texto)
+    const n = interpretarEntero(texto)
+    if (n === null) return { error: `"${cortar(texto)}" no es un número` }
     if ((cfg.min !== undefined && n < cfg.min) || (cfg.max !== undefined && n > cfg.max)) {
       return { error: `${n} fuera de rango (${cfg.min ?? '…'}–${cfg.max ?? '…'})` }
     }
-    return { valor: String(n) }
+    return { valor: String(n), nota: String(n) !== texto ? 'textos como "2 años" o "6 meses" se convirtieron a años enteros' : undefined }
+  }
+  if (cfg.input === 'url' && /^(www\.|[a-z]{2}\.)?linkedin\.com\//i.test(texto)) {
+    return { valor: `https://${texto}`, nota: 'enlaces sin "https://" se completaron' }
   }
   return { valor: texto }
 }
@@ -226,26 +299,32 @@ function cuartiles(xs: number[]): [number, number] {
   return [q(0.25), q(0.75)]
 }
 
-/** Limpia todas las filas con el mapeo elegido. `filas` no incluye el encabezado. */
+/**
+ * Limpia todas las filas con el mapeo elegido. `filas` no incluye el encabezado.
+ *
+ * Criterio (los formularios cambiaron durante la recolección, así que no se pierde una
+ * respuesta entera por un dato): un valor inválido se ANULA y el resto de la fila se
+ * conserva; solo se DESCARTA la fila repetida (mismo ID) o sin ningún dato.
+ */
 export function revisar(encuesta: Survey, columnas: ColumnaCsv[], filas: string[][]): VistaPrevia {
   const preguntas = new Map(encuesta.sections.flatMap((s) => s.questions).map((q) => [q.code, q]))
   const nombres = nombresPreguntas(encuesta)
-  const corto = (codigo: string) => nombres[codigo]?.split(' · ')[0] ?? codigo
-  const problemas: Problema[] = []
+  const p = new Problemas()
   const mapeadas = columnas.filter((c) => c.destino && c.destino !== FECHA)
-  const sinMapear = columnas.filter((c) => !c.destino).length
-  if (sinMapear) problemas.push({ fila: null, tipo: 'aviso', texto: `${sinMapear} ${sinMapear === 1 ? 'columna sin mapear no se importará' : 'columnas sin mapear no se importarán'}.` })
 
-  const obligatorias = preguntasImportables(encuesta).filter((q) => q.required && !q.display_condition && !mapeadas.some((c) => c.destino === q.code))
-  for (const q of obligatorias) problemas.push({ fila: null, tipo: 'aviso', texto: `Ninguna columna corresponde a ${corto(q.code)} (obligatoria): las filas se descartarán.` })
+  const sinMapear = columnas.filter((c) => !c.destino && !c.metadato).length
+  if (sinMapear) p.agregar('aviso', 'sin-mapear', `${sinMapear} ${sinMapear === 1 ? 'columna con una pregunta no reconocida no se importará' : 'columnas con preguntas no reconocidas no se importarán'}; revise el mapeo.`)
+  const faltan = [...preguntas.values()].filter((q) => q.required && !q.display_condition && !mapeadas.some((c) => c.destino === q.code))
+  for (const q of faltan) p.agregar('aviso', `falta-${q.code}`, `Ninguna columna corresponde a ${nombres[q.code]} (obligatoria).`)
 
   const colFecha = columnas.find((c) => c.destino === FECHA)
   const { orden, ambiguo } = ordenFechas(colFecha ? filas.map((f) => f[colFecha.indice] ?? '') : [])
-  if (!colFecha) problemas.push({ fila: null, tipo: 'aviso', texto: 'Sin columna de fecha: se usará la fecha de importación.' })
-  else if (ambiguo) problemas.push({ fila: null, tipo: 'aviso', texto: 'Las fechas no permiten distinguir día y mes; se asumió día/mes/año.' })
+  if (!colFecha) p.agregar('aviso', 'sin-fecha', 'Sin columna de fecha: se usará la fecha de importación.')
+  else if (ambiguo) p.agregar('aviso', 'fecha-ambigua', 'Las fechas no permiten distinguir día y mes; se asumió día/mes/año.')
 
   const colId = columnas.find((c) => normalizar(c.encabezado) === 'id')
-  const ids = new Set<string>()
+  const ids = new Map<string, number>()
+  const correos = new Map<string, number[]>()
   const validas: Envio[] = []
   let descartadas = 0
 
@@ -254,70 +333,82 @@ export function revisar(encuesta: Survey, columnas: ColumnaCsv[], filas: string[
     const id = colId ? celdas[colId.indice]?.trim() : ''
     if (id && ids.has(id)) {
       descartadas++
-      problemas.push({ fila, tipo: 'descartada', texto: `ID ${id} repetido; fila descartada.` })
+      p.agregar('descartada', `id-${id}`, `ID ${id} repetido (igual que la fila ${ids.get(id)}); se descarta la copia.`, fila)
       return
     }
-    if (id) ids.add(id)
+    if (id) ids.set(id, fila)
 
     const answers: Answers = {}
-    // Índice del aviso "valor anulado" de cada pregunta, por si luego la fila se descarta por ella.
-    const anulados = new Map<string, number>()
-    const anular = (codigo: string, texto: string) => {
-      anulados.set(codigo, problemas.length)
-      problemas.push({ fila, tipo: 'anulado', texto })
-    }
+    const anuladas = new Set<string>()
     for (const c of mapeadas) {
-      const celda = celdas[c.indice] ?? ''
-      if (!celda.trim()) continue
       const q = preguntas.get(c.destino!)!
-      const { valor, error } = convertir(q, celda, answers)
-      if (error) anular(q.code, `${corto(q.code)} = ${error}; valor anulado.`)
-      else if (valor !== undefined) answers[q.code] = valor
+      const celda = (celdas[c.indice] ?? '').trim()
+      if (!celda) continue
+      if (!q.options.length && !q.configuration.input && q.question_type !== 'email'
+        && (!/[\p{L}\p{N}]/u.test(celda) || (q.configuration.other_for && RELLENO.test(normalizar(celda))))) {
+        p.agregar('corregido', `relleno-${q.code}`, `${nombres[q.code]}: respuestas de relleno ("-", ".", "N/a") se tomaron como vacías.`, fila)
+        continue
+      }
+      const { valor, error, nota } = convertir(q, celda, answers)
+      if (error) {
+        anuladas.add(q.code)
+        p.agregar('anulado', `valor-${q.code}`, `${nombres[q.code]}: ${error}; valor anulado.`, fila)
+      } else if (valor !== undefined) answers[q.code] = valor
+      if (nota) p.agregar('corregido', `nota-${q.code}-${nota}`, `${nombres[q.code]}: ${nota}.`, fila)
     }
     // Topes entre preguntas (años desempleado ≤ años de vida profesional).
     for (const q of preguntas.values()) {
       const tope = q.configuration.max_question
       const v = answers[q.code], t = tope ? answers[tope] : undefined
       if (typeof v === 'string' && typeof t === 'string' && Number(v) > Number(t)) {
-        anular(q.code, `${corto(q.code)} (${v}) supera a ${corto(tope!)} (${t}); ${corto(q.code)} anulado.`)
+        anuladas.add(q.code)
+        p.agregar('anulado', `tope-${q.code}`, `${nombres[q.code]} mayor que ${nombres[tope!]}; valor anulado.`, fila)
         delete answers[q.code]
       }
     }
-    // Lo que sigue inválido (teléfono, correo…) se anula si es opcional; si falta algo obligatorio, se descarta.
+    // Lo que sigue inválido (correo, teléfono, enlace…) se anula; el resto de la fila se conserva.
     let visibles = respuestasVisibles(encuesta, answers)
-    for (const [codigo, mensaje] of Object.entries(validar(encuesta, visibles))) {
-      if (visibles[codigo] !== undefined && !preguntas.get(codigo)?.required) {
-        anular(codigo, `${corto(codigo)}: ${mensaje.replace(/\.$/, '')}; valor anulado.`)
-        delete visibles[codigo]
-      }
+    for (const [codigo, mensaje] of Object.entries(validar(encuesta, visibles, undefined, true))) {
+      const ejemplo = typeof visibles[codigo] === 'string' ? ` (p. ej. "${cortar(visibles[codigo] as string, 24)}")` : ''
+      p.agregar('anulado', `invalido-${codigo}`, `${nombres[codigo]}: ${mensaje.replace(/\.$/, '').toLowerCase()}${ejemplo}; valor anulado.`, fila)
+      anuladas.add(codigo)
+      delete visibles[codigo]
     }
     visibles = respuestasVisibles(encuesta, visibles)
-    const errores = Object.entries(validar(encuesta, visibles))
-    if (errores.length) {
+    if (Object.keys(visibles).length === 0) {
       descartadas++
-      const [codigo, mensaje] = errores[0]
-      const mas = errores.length > 1 ? ` (y ${errores.length - 1} más)` : ''
-      const previo = anulados.get(codigo)
-      if (previo !== undefined) {
-        // Se anuló un valor obligatorio: un solo aviso en lugar de dos.
-        const p = problemas[previo]
-        problemas[previo] = { ...p, tipo: 'descartada', texto: p.texto.replace(/(valor )?anulado\.$/, `anulado; es obligatoria${mas}, fila descartada.`) }
-      } else {
-        problemas.push({ fila, tipo: 'descartada', texto: `${corto(codigo)}: ${mensaje.replace(/\.$/, '')}${mas}; fila descartada.` })
-      }
+      p.agregar('descartada', 'vacia', 'Fila sin respuestas válidas; se descarta.', fila)
       return
+    }
+    // Lo que el formulario actual exigiría y la fila no tiene: se importa igual, pero se avisa.
+    for (const [codigo, mensaje] of Object.entries(validar(encuesta, visibles))) {
+      if (anuladas.has(codigo)) continue // ya avisado como valor anulado
+      p.agregar('aviso', `exigida-${codigo}-${mensaje}`, `${nombres[codigo]}: ${mensaje.replace(/\.$/, '').toLowerCase()} según el formulario actual (versión anterior o pregunta añadida después); se importa igual.`, fila)
+    }
+    for (const q of preguntas.values()) {
+      if (q.question_type === 'email' && typeof visibles[q.code] === 'string') {
+        const correo = (visibles[q.code] as string).toLowerCase()
+        correos.set(correo, [...(correos.get(correo) ?? []), fila])
+      }
     }
 
     let submitted_at: string | null = null
     const textoFecha = colFecha ? celdas[colFecha.indice]?.trim() : ''
     if (textoFecha) {
       submitted_at = aIso(textoFecha, orden)
-      if (!submitted_at) problemas.push({ fila, tipo: 'aviso', texto: `Fecha "${cortar(textoFecha)}" no reconocida; se usará la de importación.` })
+      if (!submitted_at) p.agregar('aviso', 'fecha-invalida', 'Fecha no reconocida; se usará la de importación.', fila)
     }
     validas.push({ fila, submitted_at, answers: visibles })
   })
 
-  // Atípicos (regla de 1,5 × rango intercuartílico) en las preguntas numéricas: se marcan pero se conservan.
+  for (const [correo, filasCorreo] of correos) {
+    if (filasCorreo.length > 1) {
+      p.agregar('aviso', `correo-${correo}`, `Mismo correo de contacto en ${filasCorreo.length} filas: posible envío repetido (se conservan; revíselas).`)
+      filasCorreo.forEach((f) => p.agregar('aviso', `correo-${correo}`, '', f))
+    }
+  }
+
+  // Atípicos (regla de 1,5 × rango intercuartílico) en las preguntas numéricas: se señalan pero se conservan.
   let atipicos = 0
   for (const q of preguntas.values()) {
     if (q.configuration.input !== 'integer') continue
@@ -329,13 +420,12 @@ export function revisar(encuesta: Survey, columnas: ColumnaCsv[], filas: string[
       const v = Number(e.answers[q.code])
       if (e.answers[q.code] !== undefined && (v < desde || v > hasta)) {
         atipicos++
-        problemas.push({ fila: e.fila, tipo: 'atipico', texto: `${corto(q.code)} = ${v} es atípico (habitual ${Math.max(0, Math.ceil(desde))}–${Math.floor(hasta)}); se conserva.` })
+        p.agregar('atipico', `atipico-${q.code}`, `${nombres[q.code]}: valores atípicos (lo habitual es ${Math.max(0, Math.ceil(desde))}–${Math.floor(hasta)}); se conservan.`, e.fila)
       }
     }
   }
 
-  problemas.sort((a, b) => (a.fila ?? 0) - (b.fila ?? 0))
-  return { filasLeidas: filas.length, validas, descartadas, atipicos, problemas }
+  return { filasLeidas: filas.length, validas, descartadas, atipicos, problemas: p.lista() }
 }
 
 // ---------------------------------------------------------------- envío al backend

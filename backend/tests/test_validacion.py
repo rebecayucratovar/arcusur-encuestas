@@ -142,3 +142,18 @@ def test_construir_filas_empleadores_correo_sin_permiso_de_contacto(empleadores)
     _, _, contacto = construir_filas(empleadores, limpias)
 
     assert contacto == {"email": "persona@ejemplo.com", "allow_contact": False}
+
+
+def test_importado_no_exige_obligatorias_ni_cantidad(titulados):
+    respuestas = respuesta_valida(titulados)
+    respuestas.pop("genero")
+    respuestas["asignaturas_no_utiles"] = respuestas["asignaturas_no_utiles"][:2]
+    assert validar(titulados, respuestas)[1]  # en el formulario sí son errores
+    limpias, errores = validar(titulados, respuestas, importado=True)
+    assert errores == {}
+    assert "genero" not in limpias and len(limpias["asignaturas_no_utiles"]) == 2
+
+
+def test_importado_sigue_validando_valores(titulados):
+    respuestas = respuesta_valida(titulados) | {"edad": "inventada"}
+    assert validar(titulados, respuestas, importado=True)[1] == {"edad": "Opción no válida."}

@@ -635,6 +635,7 @@ textarea.campo { resize: vertical; }
 .problema--descartada { border-left-color: var(--rojo); }
 .problema--anulado { border-left-color: #d99a1e; }
 .problema--atipico { border-left-color: #a3570a; }
+.problema--corregido { border-left-color: var(--serie-1); }
 .importacion__boton { width: 100%; margin-top: 14px; }
 
 /* ---------- datos: demostración y contactos ---------- */

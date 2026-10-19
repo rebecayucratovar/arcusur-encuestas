@@ -32,9 +32,10 @@ export function esVisible(q: Question, visibles: Answers): boolean {
   return evaluar(q.display_condition, visibles)
 }
 
-function validarValor(q: Question, valor: AnswerValue, visibles: Answers): string | null {
+function validarValor(q: Question, valor: AnswerValue, visibles: Answers, importado = false): string | null {
   const cfg = q.configuration
   if (q.question_type === 'multiple_choice') {
+    if (importado) return null // versiones anteriores del formulario pedían otra cantidad
     const n = Array.isArray(valor) ? valor.length : 1
     const { min_selected: mn, max_selected: mx } = cfg
     if (mn !== undefined && mn === mx && n !== mn) return `Seleccione exactamente ${mn} opciones.`
@@ -63,8 +64,11 @@ function validarValor(q: Question, valor: AnswerValue, visibles: Answers): strin
   return null
 }
 
-/** Errores de las preguntas visibles de una sección (o de toda la encuesta si no se indica). */
-export function validar(encuesta: Survey, respuestas: Answers, seccionId?: string): Errors {
+/**
+ * Errores de las preguntas visibles de una sección (o de toda la encuesta si no se indica).
+ * `importado`: filas de CSV; no exige obligatorias ni cantidad de opciones (igual que el backend).
+ */
+export function validar(encuesta: Survey, respuestas: Answers, seccionId?: string, importado = false): Errors {
   const visibles = respuestasVisibles(encuesta, respuestas)
   const errores: Errors = {}
   for (const s of encuesta.sections) {
@@ -73,6 +77,7 @@ export function validar(encuesta: Survey, respuestas: Answers, seccionId?: strin
       if (!esVisible(q, visibles)) continue
       const valor = respuestas[q.code]
       if (vacio(valor)) {
+        if (importado) continue
         const grupo = q.configuration.require_one_of
         if (grupo && !grupo.some((c) => !vacio(visibles[c]))) {
           errores[q.code] = "Seleccione una opción o complete el campo 'Otro'."
@@ -81,7 +86,7 @@ export function validar(encuesta: Survey, respuestas: Answers, seccionId?: strin
         }
         continue
       }
-      const error = validarValor(q, valor, visibles)
+      const error = validarValor(q, valor, visibles, importado)
       if (error) errores[q.code] = error
     }
   }

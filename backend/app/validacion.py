@@ -34,7 +34,7 @@ def _normalizar(valor):
     return None if _vacio(valor) else valor
 
 
-def _validar_valor(q, valor, limpias):
+def _validar_valor(q, valor, limpias, importado=False):
     """Devuelve (valor_limpio, error). El valor ya no está vacío."""
     tipo, cfg = q["question_type"], q["configuration"]
     permitidos = {o["value"] for o in q["options"]}
@@ -50,6 +50,8 @@ def _validar_valor(q, valor, limpias):
         if not isinstance(valor, list) or any(v not in permitidos for v in valor):
             return None, "Opción no válida."
         valor = list(dict.fromkeys(valor))  # sin repetidos, en el orden recibido
+        if importado:
+            return valor, None  # versiones anteriores del formulario pedían otra cantidad
         mn, mx = cfg.get("min_selected"), cfg.get("max_selected")
         if mn is not None and mx is not None and mn == mx and len(valor) != mn:
             return None, f"Seleccione exactamente {mn} opciones."
@@ -86,13 +88,17 @@ def _validar_valor(q, valor, limpias):
     return texto, None
 
 
-def validar(encuesta, respuestas):
+def validar(encuesta, respuestas, importado=False):
     """Valida `respuestas` ({codigo: valor}) y devuelve (limpias, errores).
 
     - Solo se conservan las preguntas visibles; las respuestas a preguntas
       ocultas se descartan sin error (el usuario pudo cambiar de rama).
     - `limpias` lleva los enteros ya convertidos a int.
     - `errores` es {codigo: mensaje}; vacío si todo es válido.
+    - `importado`: para respuestas traídas de Microsoft/Google Forms. No exige las
+      obligatorias ni la cantidad de opciones, porque el formulario cambió durante la
+      recolección (preguntas añadidas después, "5 asignaturas" que antes eran menos).
+      Los valores que sí vienen se validan igual que en el formulario.
     """
     lista = preguntas(encuesta)
     conocidas = {q["code"] for q in lista}
@@ -105,10 +111,10 @@ def validar(encuesta, respuestas):
         visibles.add(q["code"])
         valor = _normalizar(respuestas.get(q["code"]))
         if valor is None:
-            if q["required"]:
+            if q["required"] and not importado:
                 errores[q["code"]] = OBLIGATORIA
             continue
-        valor, error = _validar_valor(q, valor, limpias)
+        valor, error = _validar_valor(q, valor, limpias, importado)
         if error:
             errores[q["code"]] = error
         else:
@@ -117,7 +123,7 @@ def validar(encuesta, respuestas):
     # "Elegir una opción o escribir en Otro" (rubro, área, cargo).
     for q in lista:
         grupo = q["configuration"].get("require_one_of")
-        if q["code"] in visibles and grupo and not any(c in limpias for c in grupo):
+        if q["code"] in visibles and grupo and not importado and not any(c in limpias for c in grupo):
             errores.setdefault(q["code"], "Seleccione una opción o complete el campo 'Otro'.")
 
     return limpias, errores
