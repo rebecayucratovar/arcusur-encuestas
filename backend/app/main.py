@@ -1,14 +1,24 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from postgrest.exceptions import APIError
 
+from app import admin, auth, encuestas, respuestas
 from app.db import supabase
 
 app = FastAPI(title="arcusur-encuestas")
+app.include_router(auth.router)
+app.include_router(admin.router)
+app.include_router(encuestas.router)
+app.include_router(respuestas.router)
+
+# Orígenes del frontend separados por coma (en producción, la URL desplegada).
+ORIGENES = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[o.strip() for o in ORIGENES if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
