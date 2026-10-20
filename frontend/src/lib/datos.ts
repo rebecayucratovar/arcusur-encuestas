@@ -1,46 +1,42 @@
-// Datos que usan las pestañas del panel: el catálogo de la encuesta y sus respuestas.
-//
-// PARA CONECTAR LA BASE DE DATOS: en `cargar`, cuando DATOS_DE_DEMOSTRACION sea
-// false, pedir GET /admin/respuestas/{slug} (FilaRespuesta[], ver lib/respuestas.ts)
-// y aplanar cada una con `{ id, fecha, origen, ...valores }`. Las estadísticas de
-// Resumen y Análisis se calculan a partir de esas filas.
+// Datos reales que usan las pestañas del panel: catálogo y respuestas de Supabase
+// obtenidas a través de las rutas protegidas de FastAPI.
 
 import { useEffect, useMemo, useState } from 'react'
-import { obtenerEncuesta } from '../services/api'
+import { obtenerCatalogoAdmin, obtenerRespuestas } from '../services/api'
 import type { Survey } from '../types'
-import { generarDemo, type Fila } from './demo'
+import type { Fila } from './demo'
+import { useSesion } from './sesion'
 
-/** Mientras sea true, el panel muestra respuestas ficticias y el aviso de demostración. */
-export const DATOS_DE_DEMOSTRACION = true
+/** Compatibilidad temporal con las demás vistas; el panel nunca carga datos ficticios. */
+export const DATOS_DE_DEMOSTRACION = false
 
 interface Datos { encuesta: Survey; filas: Fila[] }
 
-// Una sola carga por encuesta mientras la página esté abierta.
-const cache = new Map<string, Promise<Datos>>()
-
-function cargar(slug: string): Promise<Datos> {
-  let p = cache.get(slug)
-  if (!p) {
-    p = obtenerEncuesta(slug).then((encuesta) => ({ encuesta, filas: generarDemo(encuesta) }))
-    p.catch(() => cache.delete(slug)) // permitir reintentar si falló
-    cache.set(slug, p)
-  }
-  return p
+async function cargar(slug: string, token: string): Promise<Datos> {
+  const [encuesta, respuestas] = await Promise.all([
+    obtenerCatalogoAdmin(token, slug),
+    obtenerRespuestas(token, slug),
+  ])
+  const filas: Fila[] = respuestas.map(({ id, fecha, origen, valores }) => ({ id, fecha, origen, ...valores }))
+  return { encuesta, filas }
 }
 
 interface Estado { slug: string; datos?: Datos; error?: string }
 
 /** Catálogo y respuestas de `slug`, solo de los `origenes` elegidos. */
 export function useDatosEncuesta(slug: string, origenes: string[]) {
+  const { token } = useSesion()
   const [estado, setEstado] = useState<Estado>({ slug })
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     let activo = true
-    cargar(slug)
+    if (!token) return
+    cargar(slug, token)
       .then((datos) => activo && setEstado({ slug, datos }))
       .catch((e: Error) => activo && setEstado({ slug, error: e.message }))
     return () => { activo = false }
-  }, [slug])
+  }, [slug, token, revision])
 
   const vigente = estado.slug === slug ? estado : { slug }
   const filas = useMemo(
@@ -51,7 +47,8 @@ export function useDatosEncuesta(slug: string, origenes: string[]) {
   return {
     encuesta: vigente.datos?.encuesta ?? null,
     filas,
-    cargando: !vigente.datos && !vigente.error,
-    error: vigente.error ?? null,
+    cargando: Boolean(token) && !vigente.datos && !vigente.error,
+    error: !token ? 'No hay una sesión administrativa activa.' : vigente.error ?? null,
+    recargar: () => setRevision((valor) => valor + 1),
   }
 }

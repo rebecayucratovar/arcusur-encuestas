@@ -2,7 +2,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from postgrest.exceptions import APIError
+from fastapi.responses import JSONResponse
 
 from app import admin, auth, encuestas, respuestas
 from app.db import supabase
@@ -10,6 +10,7 @@ from app.db import supabase
 app = FastAPI(title="arcusur-encuestas")
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(encuestas.router_admin)
 app.include_router(encuestas.router)
 app.include_router(respuestas.router)
 
@@ -31,14 +32,12 @@ def health():
 
 @app.get("/health/db")
 def health_db():
-    # Todavía no hay tablas: se consulta una inexistente. Si Supabase responde
-    # "tabla no encontrada" (PGRST205), la URL y la clave funcionan.
+    """Comprueba una tabla real sin exponer datos ni detalles de Supabase."""
     try:
-        supabase.table("_health_check").select("*").limit(1).execute()
+        supabase.table("tss_surveys").select("id").limit(1).execute()
         return {"status": "ok", "supabase": "conectado"}
-    except APIError as e:
-        if e.code == "PGRST205":
-            return {"status": "ok", "supabase": "conectado"}
-        return {"status": "error", "code": e.code, "detail": e.message}
-    except Exception as e:
-        return {"status": "error", "detail": str(e)}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "supabase": "no disponible"},
+        )

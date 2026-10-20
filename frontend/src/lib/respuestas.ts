@@ -1,8 +1,8 @@
 // Pestaña Respuestas: una fila por envío.
 //
-// CONTRATO para conectar con la base de datos: GET /admin/respuestas/{slug}
-// debe devolver `FilaRespuesta[]`, con los valores como CÓDIGOS de opción
-// (los mismos de tss_question_options.value); aquí se traducen a texto.
+// Contrato de GET /admin/respuestas/{slug}: `FilaRespuesta[]`, con los valores
+// como CÓDIGOS de opción (los mismos de tss_question_options.value); aquí se
+// traducen a texto.
 // No incluye datos de contacto (tss_submission_contacts).
 
 import type { Survey } from '../types'

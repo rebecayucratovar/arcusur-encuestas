@@ -13,6 +13,7 @@ import Escenarios from './pages/Escenarios'
 import Inicio from './pages/Inicio'
 import Login from './pages/Login'
 import Respuestas from './pages/Respuestas'
+import VistaPreviaEncuesta from './pages/VistaPreviaEncuesta'
 
 function NoEncontrada() {
   return (
@@ -35,6 +36,8 @@ export default function App() {
           <Route path="/encuestas/titulados" element={<EncuestaTitulados />} />
           <Route path="/encuestas/empleadores" element={<EncuestaEmpleadores />} />
           <Route path="/admin/login" element={<Login />} />
+          <Route path="/admin/encuestas/:slug/vista-previa"
+            element={<RutaAdmin><VistaPreviaEncuesta /></RutaAdmin>} />
 
           {/* Panel del Comité: P2 (Datos: importar/exportar) y P3 (Resumen, Análisis, Escenarios...). */}
           <Route path="/admin" element={<RutaAdmin><AdminLayout /></RutaAdmin>}>

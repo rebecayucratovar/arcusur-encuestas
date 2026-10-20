@@ -23,8 +23,13 @@ def test_elegir_version_prefiere_la_ultima_publicada():
     assert elegir_version(versiones)["id"] == "b"
 
 
-def test_elegir_version_sin_publicadas_usa_el_ultimo_borrador():
-    assert elegir_version([version("a", 1, "draft"), version("b", 2, "draft")])["id"] == "b"
+def test_elegir_version_publica_no_usa_borradores():
+    assert elegir_version([version("a", 1, "draft"), version("b", 2, "draft")]) is None
+
+
+def test_elegir_version_previa_usa_el_ultimo_borrador():
+    versiones = [version("a", 1, "published"), version("b", 2, "draft")]
+    assert elegir_version(versiones, incluir_borradores=True)["id"] == "b"
 
 
 def test_elegir_version_sin_versiones():

@@ -1,9 +1,14 @@
 """Fixtures: el catálogo real (database/catalogo/*.json) en el formato de GET /encuestas/{slug}."""
 
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+# Las pruebas no acceden a Supabase; estos valores solo permiten construir el cliente.
+os.environ.setdefault("SUPABASE_URL", "http://localhost:54321")
+os.environ.setdefault("SUPABASE_KEY", "clave-de-prueba-no-secreta")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "database" / "catalogo"))
 from generar_sql import cargar  # noqa: E402

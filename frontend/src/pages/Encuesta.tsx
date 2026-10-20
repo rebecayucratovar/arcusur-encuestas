@@ -4,8 +4,9 @@ import MatrizLikert from '../components/encuesta/MatrizLikert'
 import Pregunta from '../components/encuesta/Pregunta'
 import NavbarPublica from '../components/NavbarPublica'
 import { IconoCheck, IconoFlechaIzq } from '../components/Iconos'
+import { useSesion } from '../lib/sesion'
 import { esVisible, respuestasVisibles, validar } from '../lib/validacion'
-import { enviarRespuestas, ErrorValidacion, obtenerEncuesta } from '../services/api'
+import { enviarRespuestas, ErrorValidacion, obtenerCatalogoAdmin, obtenerEncuesta } from '../services/api'
 import type { Answers, AnswerValue, Errors, Question, Survey } from '../types'
 
 // Textos de presentación de cada formulario original.
@@ -93,23 +94,27 @@ function enfocarPregunta(codigo: string) {
   })
 }
 
-export default function Encuesta({ slug }: { slug: string }) {
+export default function Encuesta({ slug, vistaPrevia = false }: { slug: string; vistaPrevia?: boolean }) {
+  const { token } = useSesion()
   const [encuesta, setEncuesta] = useState<Survey | null>(null)
   const [errorCarga, setErrorCarga] = useState<string | null>(null)
-  const [respuestas, setRespuestas] = useState<Answers>(() => leerBorrador(slug).respuestas)
-  const [seccionId, setSeccionId] = useState<string | null>(() => leerBorrador(slug).seccionId)
+  const [respuestas, setRespuestas] = useState<Answers>(() => vistaPrevia ? {} : leerBorrador(slug).respuestas)
+  const [seccionId, setSeccionId] = useState<string | null>(() => vistaPrevia ? null : leerBorrador(slug).seccionId)
   const [errores, setErrores] = useState<Errors>({})
   const [enviando, setEnviando] = useState(false)
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [enviada, setEnviada] = useState(false)
 
   useEffect(() => {
-    obtenerEncuesta(slug).then(setEncuesta).catch((e: Error) => setErrorCarga(e.message))
-  }, [slug])
+    const carga = vistaPrevia
+      ? (token ? obtenerCatalogoAdmin(token, slug) : Promise.reject(new Error('No hay una sesión administrativa activa.')))
+      : obtenerEncuesta(slug)
+    carga.then(setEncuesta).catch((e: Error) => setErrorCarga(e.message))
+  }, [slug, token, vistaPrevia])
 
   useEffect(() => {
-    if (!enviada) guardarBorrador(slug, respuestas, seccionId)
-  }, [slug, respuestas, seccionId, enviada])
+    if (!vistaPrevia && !enviada) guardarBorrador(slug, respuestas, seccionId)
+  }, [slug, respuestas, seccionId, enviada, vistaPrevia])
 
   const visibles = useMemo(
     () => (encuesta ? respuestasVisibles(encuesta, respuestas) : {}),
@@ -177,6 +182,7 @@ export default function Encuesta({ slug }: { slug: string }) {
   }
 
   const enviar = async () => {
+    if (vistaPrevia) return
     const errs = validar(encuesta, respuestas)
     setErrores(errs)
     if (Object.keys(errs).length > 0) return irASeccionConError(errs)
@@ -203,9 +209,20 @@ export default function Encuesta({ slug }: { slug: string }) {
   return (
     <div className="encuesta">
       <NavbarPublica />
+      {vistaPrevia && (
+        <div className="encuesta__vista-previa" role="status">
+          <strong>Vista previa administrativa</strong>
+          <span>
+            Versión {encuesta.version_number} ({encuesta.version_status}) ·
+            {encuesta.is_active ? ' encuesta activa' : ' encuesta inactiva'} · no se guardarán respuestas
+          </span>
+        </div>
+      )}
       <header className="encuesta__cabecera">
         <div className="encuesta__contenedor">
-          <Link to="/" className="encuesta__volver"><IconoFlechaIzq /> Volver al inicio</Link>
+          <Link to={vistaPrevia ? '/admin' : '/'} className="encuesta__volver">
+            <IconoFlechaIzq /> {vistaPrevia ? 'Volver al panel' : 'Volver al inicio'}
+          </Link>
           <h1>{presentacion.titulo}</h1>
           {presentacion.parrafos.map((p) => <p key={p}>{p}</p>)}
           {presentacion.nota && <p className="encuesta__nota">{presentacion.nota}</p>}
@@ -232,7 +249,7 @@ export default function Encuesta({ slug }: { slug: string }) {
             ),
           )}
 
-          {esUltima && (
+          {esUltima && !vistaPrevia && (
             <p className="encuesta__consentimiento">
               Al enviar este formulario, acepta que sus respuestas se utilicen con fines académicos e
               institucionales del proceso de autoevaluación de la Carrera.
@@ -246,9 +263,13 @@ export default function Encuesta({ slug }: { slug: string }) {
                 <button type="button" className="boton boton--secundario" onClick={atras}>Atrás</button>
               )}
               {esUltima ? (
-                <button type="button" className="boton" onClick={enviar} disabled={enviando}>
-                  {enviando ? 'Enviando…' : 'Enviar'}
-                </button>
+                vistaPrevia ? (
+                  <span className="encuesta__sin-envio">Vista previa: el envío está deshabilitado</span>
+                ) : (
+                  <button type="button" className="boton" onClick={enviar} disabled={enviando}>
+                    {enviando ? 'Enviando…' : 'Enviar'}
+                  </button>
+                )
               ) : (
                 <button type="button" className="boton" onClick={siguiente}>Siguiente</button>
               )}

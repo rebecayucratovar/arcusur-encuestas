@@ -31,7 +31,7 @@ interface Archivo { nombre: string; encabezados: string[]; filas: string[][] }
 
 // ---------------------------------------------------------------- importación
 
-function Importador({ encuesta, slug }: { encuesta: Survey; slug: string }) {
+function Importador({ encuesta, slug, alImportar }: { encuesta: Survey; slug: string; alImportar: () => Promise<void> }) {
   const { token } = useSesion()
   const entrada = useRef<HTMLInputElement>(null)
   const [archivo, setArchivo] = useState<Archivo | null>(null)
@@ -88,11 +88,18 @@ function Importador({ encuesta, slug }: { encuesta: Survey; slug: string }) {
 
   const enviar = async () => {
     if (!token || !archivo || !vista) return
+    if (!window.confirm(`Se importarán ${vista.validas.length} filas de ${archivo.nombre}. ¿Continuar?`)) return
     setImportando(true)
     setError(null)
     try {
-      setResultado(await importar(token, slug, archivo.nombre, vista.validas))
+      const nuevoResultado = await importar(token, slug, archivo.nombre, vista.validas)
+      setResultado(nuevoResultado)
       cancelar()
+      try {
+        await alImportar()
+      } catch {
+        setError('La importación se guardó, pero no se pudieron actualizar los datos en pantalla. Recargue la página.')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo importar el archivo.')
     } finally {
@@ -124,10 +131,16 @@ function Importador({ encuesta, slug }: { encuesta: Survey; slug: string }) {
         </div>
         {error && <p className="aviso-error" role="alert">{error}</p>}
         {resultado && (
-          <p className="aviso-exito" role="status">
-            Se importaron {resultado.importadas} respuestas.
-            {resultado.rechazadas.length > 0 && ` El servidor rechazó ${resultado.rechazadas.length} (filas ${resultado.rechazadas.map((r) => r.fila).join(', ')}).`}
-          </p>
+          <div className="aviso-exito" role="status">
+            <p>Se importaron {resultado.importadas} respuestas.</p>
+            {resultado.rechazadas.length > 0 && (
+              <ul>
+                {resultado.rechazadas.map((rechazo) => (
+                  <li key={rechazo.fila}>Fila {rechazo.fila}: {rechazo.errores.join(' ')}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </>
     )
@@ -314,9 +327,10 @@ function Contactos({ encuesta, slug }: { encuesta: Survey; slug: string }) {
 // ---------------------------------------------------------------- página
 
 export default function Datos() {
-  const { encuesta: slug, origenes, alternarOrigen } = useContextoAdmin()
+  const { encuesta: slug, origenes, alternarOrigen, actualizarResumen } = useContextoAdmin()
   const datos = useDatosEncuesta(slug, origenes)
   const demoVisible = origenes.includes('demo')
+  const [revisionContactos, setRevisionContactos] = useState(0)
 
   return (
     <>
@@ -331,7 +345,12 @@ export default function Datos() {
       {datos.error ? <div className="estado-panel"><strong>No se pudo cargar la encuesta</strong>{datos.error}</div>
         : !datos.encuesta ? <div className="estado-panel">Cargando…</div> : (
           <>
-            <Importador key={slug} encuesta={datos.encuesta} slug={slug} />
+            <Importador key={slug} encuesta={datos.encuesta} slug={slug}
+              alImportar={async () => {
+                datos.recargar()
+                setRevisionContactos((valor) => valor + 1)
+                await actualizarResumen()
+              }} />
 
             {/* Temporal: quitar junto con DATOS_DE_DEMOSTRACION cuando el panel use datos reales. */}
             {DATOS_DE_DEMOSTRACION && (
@@ -349,7 +368,7 @@ export default function Datos() {
               </section>
             )}
 
-            <Contactos encuesta={datos.encuesta} slug={slug} />
+            <Contactos key={`${slug}-${revisionContactos}`} encuesta={datos.encuesta} slug={slug} />
           </>
         )}
     </>
