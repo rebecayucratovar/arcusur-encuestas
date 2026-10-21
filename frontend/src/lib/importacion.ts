@@ -1,4 +1,4 @@
-// Vista previa de la importación de CSV (pestaña Datos): lee el archivo, propone el
+// Vista previa de la importación (pestaña Datos; .csv aquí, .xlsx en lib/xlsx.ts): propone el
 // mapeo de columnas a preguntas del catálogo y limpia los valores ANTES de enviarlos.
 //
 // El backend vuelve a validar cada fila y las envía a la RPC `tss_import_csv`.
