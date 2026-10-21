@@ -260,6 +260,44 @@ def listar_respuestas(slug: str):
         raise HTTPException(502, "No se pudieron consultar las respuestas.")
 
 
+# ---------------------------------------------------------------- contactos
+
+@router.get("/contactos/{slug}")
+def listar_contactos(slug: str, _usuario: dict = Depends(requiere_admin)):
+    """Datos de contacto de una encuesta, del más reciente al más antiguo.
+
+    Son datos personales: solo el rol `admin` los ve y nunca entran en el análisis
+    (GET /admin/respuestas los excluye). Cada fila lleva la fecha y el origen del envío.
+    """
+    encuestas = (supabase.table("tss_surveys").select("id")
+                 .eq("slug", slug).limit(1).execute().data or [])
+    if not encuestas:
+        raise HTTPException(404, f"No existe la encuesta '{slug}'.")
+    try:
+        envios = _paginar(lambda: supabase.table("tss_submissions")
+                          .select("id, submitted_at, source")
+                          .eq("survey_id", encuestas[0]["id"])
+                          .is_("excluded_reason", "null"))
+        envio_por_id = {e["id"]: e for e in envios}
+        contactos = []
+        for ids in _lotes(list(envio_por_id)):
+            contactos.extend(_paginar(lambda ids=ids: supabase.table("tss_submission_contacts")
+                                      .select("submission_id, email, phone, linkedin_url")
+                                      .in_("submission_id", ids)))
+    except Exception:
+        raise HTTPException(502, "No se pudieron consultar los contactos.")
+
+    filas = [{
+        "submission_id": c["submission_id"],
+        "email": c.get("email"),
+        "phone": c.get("phone"),
+        "linkedin_url": c.get("linkedin_url"),
+        "submitted_at": envio_por_id[c["submission_id"]]["submitted_at"],
+        "source": envio_por_id[c["submission_id"]]["source"],
+    } for c in contactos if any(c.get(k) for k in ("email", "phone", "linkedin_url"))]
+    return sorted(filas, key=lambda f: f["submitted_at"] or "", reverse=True)
+
+
 @router.get("/resumen")
 def resumen():
     """Cantidad de envíos por encuesta y por origen (formulario web, CSV...)."""
