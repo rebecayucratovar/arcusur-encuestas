@@ -10,6 +10,7 @@ import {
   type ColumnaCsv, type EstadoColumna, type ResultadoImportacion,
 } from '../lib/importacion'
 import { useSesion } from '../lib/sesion'
+import { leerXlsx } from '../lib/xlsx'
 import type { Survey } from '../types'
 
 const ESTADOS: Record<EstadoColumna, string> = { coincide: 'coincide', revisar: 'revisar', sin_mapear: 'sin mapear' }
@@ -47,10 +48,9 @@ function Importador({ encuesta, slug, alImportar }: { encuesta: Survey; slug: st
   const opciones = useMemo(() => preguntasImportables(encuesta), [encuesta])
   const vista = useMemo(() => (archivo ? revisar(encuesta, columnas, archivo.filas) : null), [encuesta, columnas, archivo])
 
-  const abrir = (nombre: string, texto: string) => {
-    const tabla = leerCsv(texto)
+  const abrir = (nombre: string, tabla: string[][]) => {
     if (tabla.length < 2) {
-      setError('El archivo no tiene filas de respuestas (o no es un CSV).')
+      setError('El archivo no tiene filas de respuestas.')
       return
     }
     const [encabezados, ...filas] = tabla
@@ -62,11 +62,19 @@ function Importador({ encuesta, slug, alImportar }: { encuesta: Survey; slug: st
   }
   const elegir = async (f: File | undefined) => {
     if (!f) return
-    if (!/\.(csv|txt)$/i.test(f.name)) {
-      setError('Solo se aceptan archivos .csv. Si tiene un .xlsx, ábralo en Excel y guárdelo como "CSV UTF-8".')
+    if (/\.xls$/i.test(f.name)) {
+      setError('El formato .xls (Excel 97-2003) no se admite. Ábralo en Excel y guárdelo como .xlsx o .csv.')
       return
     }
-    abrir(f.name, await leerTexto(f))
+    if (!/\.(csv|txt|xlsx)$/i.test(f.name)) {
+      setError('Solo se aceptan archivos .xlsx o .csv.')
+      return
+    }
+    try {
+      abrir(f.name, /\.xlsx$/i.test(f.name) ? await leerXlsx(await f.arrayBuffer()) : leerCsv(await leerTexto(f)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo leer el archivo.')
+    }
   }
   const soltar = (e: DragEvent) => {
     e.preventDefault()
@@ -117,17 +125,17 @@ function Importador({ encuesta, slug, alImportar }: { encuesta: Survey; slug: st
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true) }}
           onDragLeave={() => setArrastrando(false)} onDrop={soltar}>
           <span className="carga__icono"><IconoSubir /></span>
-          <h2>Arrastre aquí el archivo CSV de la encuesta de {slug}</h2>
-          <p>Compatible con exportaciones de {origenForms} · separador coma o punto y coma · UTF-8</p>
+          <h2>Arrastre aquí el archivo Excel o CSV de la encuesta de {slug}</h2>
+          <p>Exportación de {origenForms} tal cual (.xlsx) o guardada como CSV (coma o punto y coma)</p>
           <div className="carga__botones">
             <button type="button" className="boton boton--oscuro" onClick={() => entrada.current?.click()}>Seleccionar archivo</button>
             {DATOS_DE_DEMOSTRACION && (
-              <button type="button" className="boton boton--secundario" onClick={() => { const e = archivoEjemplo(encuesta); abrir(e.nombre, e.texto) }}>
+              <button type="button" className="boton boton--secundario" onClick={() => { const e = archivoEjemplo(encuesta); abrir(e.nombre, leerCsv(e.texto)) }}>
                 <IconoArchivo /> Probar con archivo de ejemplo
               </button>
             )}
           </div>
-          <input ref={entrada} type="file" accept=".csv,text/csv" hidden onChange={(e) => elegir(e.target.files?.[0])} />
+          <input ref={entrada} type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden onChange={(e) => elegir(e.target.files?.[0])} />
         </div>
         {error && <p className="aviso-error" role="alert">{error}</p>}
         {resultado && (
@@ -173,7 +181,7 @@ function Importador({ encuesta, slug, alImportar }: { encuesta: Survey; slug: st
           <div className="importacion__desplazable">
             <table className="tabla-datos mapeo">
               <thead>
-                <tr><th scope="col">Encabezado del CSV</th><th aria-hidden="true" /><th scope="col">Variable</th><th scope="col">Estado</th></tr>
+                <tr><th scope="col">Encabezado del archivo</th><th aria-hidden="true" /><th scope="col">Variable</th><th scope="col">Estado</th></tr>
               </thead>
               <tbody>
                 {visibles.map((c) => (
