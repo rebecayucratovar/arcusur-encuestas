@@ -1,12 +1,13 @@
 // Vista previa de la importación de CSV (pestaña Datos): lee el archivo, propone el
 // mapeo de columnas a preguntas del catálogo y limpia los valores ANTES de enviarlos.
 //
-// El backend vuelve a validar cada fila al guardar (guardar_respuesta, igual que el
-// formulario); esto solo permite revisar el mapeo y los problemas en pantalla.
+// El backend vuelve a validar cada fila y las envía a la RPC `tss_import_csv`.
+// Esa RPC depende de una migración PENDIENTE de validación y aplicación remota;
+// hasta entonces la importación no está operativa en producción.
 //
-// PARA CONECTAR: `importar` envía las filas válidas a POST /admin/importar/{slug}
-// (lo implementa P2). Cuerpo: { archivo, filas: [{ fila, submitted_at, answers }] }.
-// Respuesta esperada: { importadas: number, rechazadas: [{ fila, errores }] }.
+// `importar` llama POST /admin/importar/{slug}.
+// Cuerpo: { archivo, filas: [{ fila, submitted_at, answers }] }.
+// Respuesta: { importadas: number, rechazadas: [{ fila, errores }] }.
 
 import { fetchAdmin } from '../services/api'
 import type { Answers, Question, Survey } from '../types'
@@ -430,7 +431,7 @@ export function revisar(encuesta: Survey, columnas: ColumnaCsv[], filas: string[
 
 // ---------------------------------------------------------------- envío al backend
 
-export interface ResultadoImportacion { importadas: number; rechazadas: { fila: number; errores: Record<string, string> }[] }
+export interface ResultadoImportacion { importadas: number; rechazadas: { fila: number; errores: string[] }[] }
 
 export async function importar(token: string, slug: string, archivo: string, filas: Envio[]): Promise<ResultadoImportacion> {
   const r = await fetchAdmin(token, `/admin/importar/${slug}`, {

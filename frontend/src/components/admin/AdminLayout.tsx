@@ -27,6 +27,12 @@ function iniciales(email: string) {
   return email.slice(0, 2).toUpperCase()
 }
 
+async function cargarResumen(token: string): Promise<Resumen> {
+  const respuesta = await fetchAdmin(token, '/admin/resumen')
+  if (!respuesta.ok) throw new Error('No se pudo actualizar el resumen.')
+  return respuesta.json()
+}
+
 export default function AdminLayout() {
   const { admin, token, cerrarSesion } = useSesion()
   const [encuesta, setEncuesta] = useState<SlugEncuesta>('titulados')
@@ -36,6 +42,10 @@ export default function AdminLayout() {
   const [origenes, setOrigenes] = useState<string[]>(() => ORIGENES_DISPONIBLES.map((o) => o.valor))
   const alternarOrigen = (valor: string) =>
     setOrigenes((sel) => (sel.includes(valor) ? sel.filter((v) => v !== valor) : [...sel, valor]))
+  const actualizarResumen = async () => {
+    if (!token) return
+    setResumen(await cargarResumen(token))
+  }
   // Menú lateral en celular (en escritorio siempre está visible).
   const [lateralAbierto, setLateralAbierto] = useState(false)
   const cerrarLateral = () => setLateralAbierto(false)
@@ -53,8 +63,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!token) return
-    fetchAdmin(token, '/admin/resumen')
-      .then((r) => (r.ok ? r.json() : null))
+    cargarResumen(token)
       .then(setResumen)
       .catch(() => setResumen(null))
   }, [token])
@@ -86,6 +95,10 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
+        <Link to={`/admin/encuestas/${encuesta}/vista-previa`} target="_blank" rel="noreferrer"
+          className="admin__enlace admin__publicas">
+          <IconoExterno /><span>Previsualizar borrador</span>
+        </Link>
         <Link to="/" className="admin__enlace admin__publicas"><IconoExterno /><span>Ver encuestas públicas</span></Link>
       </aside>
 
@@ -148,7 +161,7 @@ export default function AdminLayout() {
         )}
 
         <main className="admin__contenido">
-          <Outlet context={{ encuesta, resumen, origenes, alternarOrigen } satisfies ContextoAdmin} />
+          <Outlet context={{ encuesta, resumen, origenes, alternarOrigen, actualizarResumen } satisfies ContextoAdmin} />
         </main>
       </div>
     </div>

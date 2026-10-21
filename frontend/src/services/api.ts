@@ -1,4 +1,5 @@
 import type { Admin } from '../lib/sesion'
+import type { FilaRespuesta } from '../lib/respuestas'
 import type { Answers, Errors, Survey } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
@@ -40,12 +41,33 @@ export async function fetchAdmin(token: string, ruta: string, init: RequestInit 
   return fetch(`${API_URL}${ruta}`, { ...init, headers })
 }
 
-/** Verifica que el token pertenezca a un administrador activo. */
+/** Verifica que el token pertenezca a un miembro activo del Comité. */
 export async function obtenerAdmin(token: string): Promise<Admin> {
   const r = await fetchAdmin(token, '/auth/yo')
   if (!r.ok) {
     const { detail } = await r.json().catch(() => ({ detail: null }))
     throw new Error(detail ?? `No se pudo verificar la sesión (${r.status}).`)
+  }
+  return r.json()
+}
+
+/** Respuestas analíticas reales; el backend excluye los datos de contacto. */
+export async function obtenerRespuestas(token: string, slug: string): Promise<FilaRespuesta[]> {
+  const r = await fetchAdmin(token, `/admin/respuestas/${encodeURIComponent(slug)}`)
+  if (!r.ok) {
+    const { detail } = await r.json().catch(() => ({ detail: null }))
+    throw new Error(typeof detail === 'string' ? detail : `No se pudieron cargar las respuestas (${r.status}).`)
+  }
+  return r.json()
+}
+
+
+/** Catálogo protegido para el panel y la vista previa; nunca publica la versión. */
+export async function obtenerCatalogoAdmin(token: string, slug: string): Promise<Survey> {
+  const r = await fetchAdmin(token, `/admin/encuestas/${encodeURIComponent(slug)}/vista-previa`)
+  if (!r.ok) {
+    const { detail } = await r.json().catch(() => ({ detail: null }))
+    throw new Error(typeof detail === 'string' ? detail : `No se pudo cargar la vista previa (${r.status}).`)
   }
   return r.json()
 }
