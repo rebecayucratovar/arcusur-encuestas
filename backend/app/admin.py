@@ -179,7 +179,7 @@ def cargar_respuestas(slug: str):
                       .select("id, submitted_at, source")
                       .eq("survey_id", survey_id)
                       .is_("excluded_reason", "null")
-                      .order("submitted_at"))
+                      .order("submitted_at").order("id"))
     if not envios:
         return []
 
@@ -187,7 +187,7 @@ def cargar_respuestas(slug: str):
     for ids in _lotes([e["id"] for e in envios]):
         respuestas.extend(_paginar(lambda ids=ids: supabase.table("tss_answers")
                                    .select("id, submission_id, question_id, text_value, numeric_value")
-                                   .in_("submission_id", ids)))
+                                   .in_("submission_id", ids).order("id")))
 
     preguntas = []
     ids_preguntas = list(dict.fromkeys(r["question_id"] for r in respuestas))
@@ -196,12 +196,16 @@ def cargar_respuestas(slug: str):
                                   .select("id, code, question_type, configuration")
                                   .in_("id", ids)))
 
+    # Las elecciones se piden por pregunta (pocas consultas) y no por respuesta (una
+    # consulta cada 200 respuestas); luego se descartan las de envíos excluidos.
     elecciones = []
-    ids_respuestas = [r["id"] for r in respuestas]
-    for ids in _lotes(ids_respuestas):
-        elecciones.extend(_paginar(lambda ids=ids: supabase.table("tss_answer_choices")
-                                   .select("answer_id, option_id")
-                                   .in_("answer_id", ids)))
+    ids_respuestas = {r["id"] for r in respuestas}
+    for ids in _lotes(ids_preguntas):
+        elecciones.extend(e for e in _paginar(lambda ids=ids: supabase.table("tss_answer_choices")
+                                              .select("answer_id, option_id")
+                                              .in_("question_id", ids)
+                                              .order("answer_id").order("option_id"))
+                          if e["answer_id"] in ids_respuestas)
 
     opciones = []
     ids_opciones = list(dict.fromkeys(e["option_id"] for e in elecciones))

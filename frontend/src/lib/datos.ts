@@ -21,6 +21,20 @@ async function cargar(slug: string, token: string): Promise<Datos> {
   return { encuesta, filas }
 }
 
+// Una sola descarga por encuesta mientras la página esté abierta: cambiar de pestaña no
+// vuelve a pedir las respuestas. `recargar` (p. ej. después de importar) la invalida.
+const cache = new Map<string, Promise<Datos>>()
+
+function obtener(slug: string, token: string): Promise<Datos> {
+  let p = cache.get(slug)
+  if (!p) {
+    p = cargar(slug, token)
+    p.catch(() => cache.delete(slug)) // permitir reintentar si falló
+    cache.set(slug, p)
+  }
+  return p
+}
+
 interface Estado { slug: string; datos?: Datos; error?: string }
 
 /** Catálogo y respuestas de `slug`, solo de los `origenes` elegidos. */
@@ -32,7 +46,7 @@ export function useDatosEncuesta(slug: string, origenes: string[]) {
   useEffect(() => {
     let activo = true
     if (!token) return
-    cargar(slug, token)
+    obtener(slug, token)
       .then((datos) => activo && setEstado({ slug, datos }))
       .catch((e: Error) => activo && setEstado({ slug, error: e.message }))
     return () => { activo = false }
@@ -49,6 +63,9 @@ export function useDatosEncuesta(slug: string, origenes: string[]) {
     filas,
     cargando: Boolean(token) && !vigente.datos && !vigente.error,
     error: !token ? 'No hay una sesión administrativa activa.' : vigente.error ?? null,
-    recargar: () => setRevision((valor) => valor + 1),
+    recargar: () => {
+      cache.delete(slug)
+      setRevision((valor) => valor + 1)
+    },
   }
 }

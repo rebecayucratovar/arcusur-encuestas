@@ -80,9 +80,9 @@ TABLAS = {
          "configuration": {"store": "contact", "personal_data": True}},
     ],
     "tss_answer_choices": [
-        {"answer_id": "a1", "option_id": "o1"},
-        {"answer_id": "a2", "option_id": "o3"},
-        {"answer_id": "a2", "option_id": "o2"},
+        {"answer_id": "a1", "question_id": "q1", "option_id": "o1"},
+        {"answer_id": "a2", "question_id": "q2", "option_id": "o3"},
+        {"answer_id": "a2", "question_id": "q2", "option_id": "o2"},
     ],
     "tss_question_options": [
         {"id": "o1", "value": "mujer", "position": 2},
