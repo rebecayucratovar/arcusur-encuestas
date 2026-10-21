@@ -1,8 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.auth import requiere_staff
 from app.db import supabase
 
 router = APIRouter(prefix="/encuestas", tags=["encuestas"])
+router_admin = APIRouter(
+    prefix="/admin/encuestas",
+    tags=["admin"],
+    dependencies=[Depends(requiere_staff)],
+)
 
 # Notas internas del catálogo que el formulario no necesita.
 CONFIG_INTERNA = {"source", "source_note"}
@@ -20,10 +26,14 @@ SELECT_VERSION = """
 """
 
 
-def elegir_version(versiones):
-    """La última versión publicada; si no hay ninguna, la última en borrador."""
-    publicadas = [v for v in versiones if v["status"] == "published"]
-    candidatas = publicadas or versiones
+def elegir_version(versiones, incluir_borradores=False):
+    """Elige una versión visible para el contexto solicitado.
+
+    Las rutas públicas solo pueden elegir versiones publicadas. La vista previa
+    administrativa también admite borradores, pero nunca versiones archivadas.
+    """
+    estados = {"published", "draft"} if incluir_borradores else {"published"}
+    candidatas = [v for v in versiones if v["status"] in estados]
     return max(candidatas, key=lambda v: v["version_number"], default=None)
 
 
@@ -70,18 +80,27 @@ class EncuestaNoEncontrada(Exception):
     pass
 
 
-def cargar_encuesta(slug):
-    """Encuesta armada con su versión vigente. Lanza EncuestaNoEncontrada."""
+def cargar_encuesta(slug, *, vista_previa=False):
+    """Carga una encuesta pública o una vista previa administrativa.
+
+    En modo público exige que la encuesta esté activa y que exista una versión
+    publicada. La vista previa puede recuperar el último borrador aunque la
+    encuesta esté inactiva. Lanza ``EncuestaNoEncontrada`` si no es visible en
+    el contexto solicitado.
+    """
     filas = supabase.table("tss_surveys").select("*").eq("slug", slug).limit(1).execute().data
     if not filas:
         raise EncuestaNoEncontrada(f"No existe la encuesta '{slug}'")
     encuesta = filas[0]
+    if not vista_previa and not encuesta["is_active"]:
+        raise EncuestaNoEncontrada(f"La encuesta '{slug}' no está disponible")
 
     versiones = (supabase.table("tss_survey_versions").select(SELECT_VERSION)
                  .eq("survey_id", encuesta["id"]).execute().data)
-    version = elegir_version(versiones)
+    version = elegir_version(versiones, incluir_borradores=vista_previa)
     if version is None:
-        raise EncuestaNoEncontrada(f"La encuesta '{slug}' no tiene versiones")
+        detalle = "versiones disponibles" if vista_previa else "una versión publicada"
+        raise EncuestaNoEncontrada(f"La encuesta '{slug}' no tiene {detalle}")
     return armar_encuesta(encuesta, version)
 
 
@@ -89,5 +108,14 @@ def cargar_encuesta(slug):
 def obtener_encuesta(slug: str):
     try:
         return cargar_encuesta(slug)
+    except EncuestaNoEncontrada as e:
+        raise HTTPException(404, str(e))
+
+
+@router_admin.get("/{slug}/vista-previa")
+def obtener_vista_previa(slug: str):
+    """Permite al Comité revisar el último borrador sin publicarlo."""
+    try:
+        return cargar_encuesta(slug, vista_previa=True)
     except EncuestaNoEncontrada as e:
         raise HTTPException(404, str(e))

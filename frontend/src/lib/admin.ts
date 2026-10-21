@@ -21,6 +21,7 @@ export interface ContextoAdmin {
   /** Orígenes elegidos en la barra superior: cada pestaña muestra solo esas respuestas. */
   origenes: string[]
   alternarOrigen: (valor: string) => void
+  actualizarResumen: () => Promise<void>
 }
 
 /** Para las páginas del panel: encuesta y orígenes elegidos arriba, y conteos reales. */
