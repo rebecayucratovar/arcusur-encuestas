@@ -70,8 +70,9 @@ def test_otra_asignatura_no_cuenta_para_el_limite(titulados):
     assert limpias["otra_ventaja"] == "Sistemas Operativos"
 
 
-@pytest.mark.parametrize("valor, esperado", [("7", 7), (" 7 ", 7), ("siete", None), ("7.5", None), ("61", None)])
-def test_anios_profesional_entero(titulados, valor, esperado):
+@pytest.mark.parametrize("valor, esperado", [("7", 7), (" 7 ", 7), ("7.5", 7.5), ("1,5", 1.5), ("7.0", 7),
+                                             ("siete", None), ("-1", None), ("61", None)])
+def test_anios_profesional_numero(titulados, valor, esperado):
     respuestas = respuesta_valida(titulados) | {"anios_profesional": valor, "anios_desempleado": "0"}
     limpias, errores = validar(titulados, respuestas)
 
@@ -84,6 +85,31 @@ def test_anios_profesional_entero(titulados, valor, esperado):
 def test_desempleo_no_supera_vida_profesional(titulados):
     respuestas = respuesta_valida(titulados) | {"anios_profesional": "3", "anios_desempleado": "4"}
     assert validar(titulados, respuestas)[1] == {"anios_desempleado": "No puede ser mayor que 3."}
+
+
+def test_desempleo_con_decimales_se_guarda_como_texto(titulados):
+    respuestas = respuesta_valida(titulados) | {"anios_profesional": "1.5", "anios_desempleado": "0.5"}
+    limpias, errores = validar(titulados, respuestas)
+    assert errores == {} and limpias["anios_desempleado"] == 0.5
+
+    answers, _, _ = construir_filas(titulados, limpias)
+    por_pregunta = {a["question_id"]: a for a in answers}
+    assert por_pregunta["q-anios_desempleado"]["text_value"] == "0.5"
+
+
+def test_area_admite_varias_opciones_y_otra_area_es_obligatoria(titulados):
+    base = respuesta_valida(titulados, {"situacion_laboral": "trabaja"})
+    limpias, errores = validar(titulados, base | {"area_trabajo": ["desarrollo", "computo"]})
+    assert errores == {} and limpias["area_trabajo"] == ["desarrollo", "computo"]
+
+    assert "area_trabajo" in validar(titulados, base | {"area_trabajo": []})[1]
+    assert "otra_area" in validar(titulados, base | {"otra_area": ""})[1]
+
+
+def test_cargo_y_otro_cargo_son_obligatorios(titulados):
+    base = respuesta_valida(titulados, {"situacion_laboral": "trabaja"})
+    assert "cargo_trabajo" in validar(titulados, base | {"cargo_trabajo": ""})[1]
+    assert "otro_cargo" in validar(titulados, base | {"otro_cargo": ""})[1]
 
 
 def test_rubro_u_otro_rubro(titulados):

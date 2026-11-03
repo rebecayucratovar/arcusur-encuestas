@@ -118,7 +118,7 @@ function responder(
     }
     return elegidas
   }
-  if (cfg.input === 'integer') {
+  if (cfg.input === 'decimal') {
     if (q.code === 'anios_profesional') {
       const [a, b] = ANIOS_POR_EDAD[String(previas.edad)] ?? [0, 10]
       return String(a + Math.floor(r() * (b - a + 1)))

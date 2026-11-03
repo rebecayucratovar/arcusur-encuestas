@@ -43,7 +43,7 @@ def construir_filas(encuesta, limpias):
             elecciones[q["id"]] = [ids[v] for v in elegidas]
         else:
             # Un trigger de la BD exige que las preguntas de texto usen solo text_value,
-            # incluso las numéricas (input: integer): se guardan como "6", ya validadas.
+            # incluso las numéricas (input: decimal): se guardan como "6" o "0.5", ya validadas.
             fila["text_value"] = str(valor)
         answers.append(fila)
 

@@ -89,7 +89,7 @@ export function Texto({ q, valor, onChange, invalido }: Props<string>) {
   }
   const tipo = q.question_type === 'email' ? 'email' : cfg.input === 'url' ? 'url' : cfg.input === 'phone' ? 'tel' : 'text'
   return (
-    <input {...comun} type={tipo} inputMode={cfg.input === 'integer' ? 'numeric' : undefined}
+    <input {...comun} type={tipo} inputMode={cfg.input === 'decimal' ? 'decimal' : undefined}
       onChange={(e) => onChange(e.target.value)} />
   )
 }

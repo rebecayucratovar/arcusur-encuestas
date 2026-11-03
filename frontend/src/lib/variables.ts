@@ -63,7 +63,7 @@ export function variables(encuesta: Survey | null): Variable[] {
   for (const q of encuesta?.sections.flatMap((s) => s.questions) ?? []) {
     if (q.configuration.store === 'contact' || q.configuration.other_for) continue
     numero++
-    const numerica = q.configuration.input === 'integer'
+    const numerica = q.configuration.input === 'decimal'
     if (!q.options.length && !numerica) continue // textos libres: no se tabulan
     const nombre = NOMBRES[q.code] ?? recortar(q.prompt.replace(/^\d+\)\s*/, ''))
     lista.push({

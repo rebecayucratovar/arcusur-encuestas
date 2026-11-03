@@ -230,15 +230,14 @@ const cortar = (s: string, n = 30) => (s.length > n ? `${s.slice(0, n - 1)}…` 
 /** Respuestas de relleno en campos de texto ("-", ".", "N/a", "ninguno"). */
 const RELLENO = /^(n ?a|na|s ?n|x+|no|nada|ninguno|ninguna|ningun|no tengo|sin respuesta|prefiero no responder)$/
 
-/** "2 años" → 2, "1.5" → 1, "6 meses" → 0, "ninguno" → 0; null si no hay un número. */
-function interpretarEntero(texto: string): number | null {
+/** "2 años" → 2, "1,5" → 1.5, "6 meses" → 0.5, "ninguno" → 0; null si no hay un número. */
+function interpretarAnios(texto: string): number | null {
   const n = normalizar(texto)
-  if (/^\d+$/.test(texto.trim())) return Number(texto.trim())
   if (/^(ninguno|ninguna|nada|cero)\b/.test(n)) return 0
   const m = texto.trim().toLowerCase().match(/^(?:unos?\s+|aprox\.?\s*)?(\d+(?:[.,]\d+)?)\s*(meses|mes)?/)
   if (!m) return null
   const valor = Number(m[1].replace(',', '.'))
-  return Math.floor(m[2] ? valor / 12 : valor)
+  return Math.round((m[2] ? valor / 12 : valor) * 100) / 100
 }
 
 interface Conversion { valor?: string | string[]; error?: string; nota?: string }
@@ -280,13 +279,13 @@ function convertir(q: Question, celda: string, answers: Answers): Conversion {
     const posicion = (v: string) => n.indexOf(normalizar(q.options.find((o) => o.value === v)!.label))
     return elegidas.length ? { valor: elegidas.sort((x, y) => posicion(x) - posicion(y)) } : {}
   }
-  if (cfg.input === 'integer') {
-    const n = interpretarEntero(texto)
+  if (cfg.input === 'decimal') {
+    const n = interpretarAnios(texto)
     if (n === null) return { error: `"${cortar(texto)}" no es un número` }
     if ((cfg.min !== undefined && n < cfg.min) || (cfg.max !== undefined && n > cfg.max)) {
       return { error: `${n} fuera de rango (${cfg.min ?? '…'}–${cfg.max ?? '…'})` }
     }
-    return { valor: String(n), nota: String(n) !== texto ? 'textos como "2 años" o "6 meses" se convirtieron a años enteros' : undefined }
+    return { valor: String(n), nota: String(n) !== texto ? 'textos como "2 años" o "6 meses" se convirtieron a años (6 meses = 0.5)' : undefined }
   }
   if (cfg.input === 'url' && /^(www\.|[a-z]{2}\.)?linkedin\.com\//i.test(texto)) {
     return { valor: `https://${texto}`, nota: 'enlaces sin "https://" se completaron' }
@@ -412,7 +411,7 @@ export function revisar(encuesta: Survey, columnas: ColumnaCsv[], filas: string[
   // Atípicos (regla de 1,5 × rango intercuartílico) en las preguntas numéricas: se señalan pero se conservan.
   let atipicos = 0
   for (const q of preguntas.values()) {
-    if (q.configuration.input !== 'integer') continue
+    if (q.configuration.input !== 'decimal') continue
     const valores = validas.map((e) => e.answers[q.code]).filter((v): v is string => typeof v === 'string').map(Number)
     if (valores.length < 8) continue
     const [q1, q3] = cuartiles(valores)

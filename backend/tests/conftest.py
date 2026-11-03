@@ -60,7 +60,7 @@ def respuesta_valida(encuesta, eleccion=None):
                 respuestas[cod] = valores[0]
             elif q["question_type"] == "email":
                 respuestas[cod] = "persona@ejemplo.com"
-            elif cfg.get("input") == "integer":
+            elif cfg.get("input") == "decimal":
                 respuestas[cod] = "1"
             elif cfg.get("input") == "phone":
                 respuestas[cod] = "+591 70000000"

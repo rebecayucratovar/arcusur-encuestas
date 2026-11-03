@@ -7,6 +7,7 @@ import { evaluar } from './condiciones'
 const RE_EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const RE_TELEFONO = /^\+?[\d\s-]{6,20}$/
 const RE_URL = /^https?:\/\/\S+\.\S+$/i
+const RE_NUMERO = /^\d+(?:[.,]\d+)?$/
 
 export const OBLIGATORIA = 'Esta pregunta es obligatoria.'
 
@@ -47,14 +48,14 @@ function validarValor(q: Question, valor: AnswerValue, visibles: Answers, import
   const texto = valor.trim()
 
   if (q.question_type === 'email') return RE_EMAIL.test(texto) ? null : 'Correo electrónico no válido.'
-  if (cfg.input === 'integer') {
-    if (!/^\d+$/.test(texto)) return 'Introduzca solo un número entero, sin espacios.'
-    const n = Number(texto)
+  if (cfg.input === 'decimal') {
+    if (!RE_NUMERO.test(texto)) return 'Introduzca solo un número, sin espacios (puede usar decimales).'
+    const n = Number(texto.replace(',', '.'))
     if (cfg.min !== undefined && n < cfg.min) return `El valor mínimo es ${cfg.min}.`
     if (cfg.max !== undefined && n > cfg.max) return `El valor máximo es ${cfg.max}.`
     const tope = cfg.max_question ? visibles[cfg.max_question] : undefined
-    if (typeof tope === 'string' && /^\d+$/.test(tope.trim()) && n > Number(tope)) {
-      return `No puede ser mayor que ${Number(tope)}.`
+    if (typeof tope === 'string' && RE_NUMERO.test(tope.trim()) && n > Number(tope.trim().replace(',', '.'))) {
+      return `No puede ser mayor que ${tope.trim()}.`
     }
   }
   if (cfg.input === 'phone' && !RE_TELEFONO.test(texto)) return 'Número de teléfono no válido.'

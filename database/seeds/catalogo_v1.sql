@@ -178,7 +178,7 @@ begin
                              required, position, configuration, display_condition)
   values (v_section, 'anios_profesional', '¿CUÁNTOS SON LOS AÑOS DE VIDA PROFESIONAL QUE LLEVA HASTA LA FECHA?', 'Introduzca solo un número sin espacios por delante o detrás de este',
           'short_text', true, 1,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "input": "integer", "min": 0, "max": 60}'::jsonb,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "input": "decimal", "min": 0, "max": 60}'::jsonb,
           null)
   returning id into v_question;
 
@@ -186,7 +186,7 @@ begin
                              required, position, configuration, display_condition)
   values (v_section, 'anios_desempleado', 'DE LA CANTIDAD DE TIEMPO RESPONDIDA EN LA PREGUNTA ANTERIOR, ¿QUÉ CANTIDAD CORRESPONDE AL TOTAL DE TIEMPO EN QUE SE HA ENCONTRADO DESEMPLEADO?', 'Introduzca solo un número sin espacios por delante o detrás de este',
           'short_text', true, 2,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "input": "integer", "min": 0, "max_question": "anios_profesional"}'::jsonb,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "input": "decimal", "min": 0, "max_question": "anios_profesional"}'::jsonb,
           null)
   returning id into v_question;
 
@@ -283,8 +283,8 @@ begin
   insert into tss_questions (section_id, code, prompt, help_text, question_type,
                              required, position, configuration, display_condition)
   values (v_section, 'area_trabajo', '¿CUÁL ES EL ÁREA DENTRO DE LA ORGANIZACIÓN DONDE DESARROLLA SUS ACTIVIDADES PROFESIONALES?', null,
-          'single_choice', false, 7,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "other_question": "otra_area", "require_one_of": ["area_trabajo", "otra_area"]}'::jsonb,
+          'multiple_choice', true, 7,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": "En Microsoft Forms admite varias opciones: 49 de 108 respuestas traen dos.", "other_question": "otra_area", "min_selected": 1}'::jsonb,
           '{"q": "situacion_laboral", "eq": "trabaja"}'::jsonb)
   returning id into v_question;
   insert into tss_question_options (question_id, value, label, position) values
@@ -297,7 +297,7 @@ begin
   insert into tss_questions (section_id, code, prompt, help_text, question_type,
                              required, position, configuration, display_condition)
   values (v_section, 'otra_area', 'OTR@ AREA:', null,
-          'short_text', false, 8,
+          'short_text', true, 8,
           '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "other_for": "area_trabajo"}'::jsonb,
           '{"q": "situacion_laboral", "eq": "trabaja"}'::jsonb)
   returning id into v_question;
@@ -305,8 +305,8 @@ begin
   insert into tss_questions (section_id, code, prompt, help_text, question_type,
                              required, position, configuration, display_condition)
   values (v_section, 'cargo_trabajo', '¿Cuál es el cargo que desempeña en su actual trabajo?', null,
-          'single_choice', false, 9,
-          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "other_question": "otro_cargo", "require_one_of": ["cargo_trabajo", "otro_cargo"]}'::jsonb,
+          'single_choice', true, 9,
+          '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": "En Microsoft Forms son obligatorias la opción y el texto ''OTR@ CARGO''.", "other_question": "otro_cargo"}'::jsonb,
           '{"q": "situacion_laboral", "eq": "trabaja"}'::jsonb)
   returning id into v_question;
   insert into tss_question_options (question_id, value, label, position) values
@@ -318,7 +318,7 @@ begin
   insert into tss_questions (section_id, code, prompt, help_text, question_type,
                              required, position, configuration, display_condition)
   values (v_section, 'otro_cargo', 'OTR@ CARGO:', null,
-          'short_text', false, 10,
+          'short_text', true, 10,
           '{"source": "encuesta.pdf (capturas del formulario Microsoft Forms)", "source_note": null, "other_for": "cargo_trabajo"}'::jsonb,
           '{"q": "situacion_laboral", "eq": "trabaja"}'::jsonb)
   returning id into v_question;

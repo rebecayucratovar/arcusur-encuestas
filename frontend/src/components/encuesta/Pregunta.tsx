@@ -53,7 +53,9 @@ export default function Pregunta({ q, numero, valor, error, onChange, otro }: Pr
 
       {otro && (
         <div className="pregunta__otro">
-          <label htmlFor={`c-${otro.q.code}`} id={`p-${otro.q.code}`}>{otro.q.prompt}</label>
+          <label htmlFor={`c-${otro.q.code}`} id={`p-${otro.q.code}`}>{otro.q.prompt}
+            {otro.q.required && <span className="obligatorio" aria-label="obligatoria"> *</span>}
+          </label>
           <Control q={otro.q} valor={otro.valor} error={otro.error} onChange={onChange} />
           <MensajeError codigo={otro.q.code} mensaje={otro.error} />
         </div>

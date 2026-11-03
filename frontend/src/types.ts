@@ -30,7 +30,7 @@ export interface QuestionConfig {
   other_question?: string
   other_for?: string
   require_one_of?: string[]
-  input?: 'integer' | 'phone' | 'url'
+  input?: 'decimal' | 'phone' | 'url'
   min?: number
   max?: number
   max_question?: string

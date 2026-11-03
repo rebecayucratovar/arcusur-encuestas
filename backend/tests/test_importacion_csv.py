@@ -51,7 +51,7 @@ def encuesta_minima():
              ]},
             {"id": "00000000-0000-0000-0000-000000000030", "code": "experiencia",
              "question_type": "short_text", "required": False, "display_condition": None,
-             "configuration": {"input": "integer", "min": 0, "max": 60}, "options": []},
+             "configuration": {"input": "decimal", "min": 0, "max": 60}, "options": []},
             {"id": "00000000-0000-0000-0000-000000000040", "code": "email",
              "question_type": "email", "required": False, "display_condition": None,
              "configuration": {"store": "contact", "contact_field": "email"}, "options": []},

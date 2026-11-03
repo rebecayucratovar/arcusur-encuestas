@@ -12,6 +12,7 @@ CON_OPCIONES = {"single_choice", "likert", "multiple_choice"}
 RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 RE_TELEFONO = re.compile(r"^\+?[\d\s-]{6,20}$")
 RE_URL = re.compile(r"^https?://\S+\.\S+$", re.IGNORECASE)
+RE_NUMERO = re.compile(r"\d+(?:[.,]\d+)?")
 
 OBLIGATORIA = "Esta pregunta es obligatoria."
 
@@ -69,10 +70,11 @@ def _validar_valor(q, valor, limpias, importado=False):
         return (texto, None) if RE_EMAIL.match(texto) else (None, "Correo electrónico no válido.")
 
     entrada = cfg.get("input")
-    if entrada == "integer":
-        if not re.fullmatch(r"\d+", texto):
-            return None, "Introduzca solo un número entero, sin espacios."
-        numero = int(texto)
+    if entrada == "decimal":
+        if not RE_NUMERO.fullmatch(texto):
+            return None, "Introduzca solo un número, sin espacios (puede usar decimales)."
+        numero = float(texto.replace(",", "."))
+        numero = int(numero) if numero.is_integer() else numero  # "6" se guarda como 6, no 6.0
         if "min" in cfg and numero < cfg["min"]:
             return None, f"El valor mínimo es {cfg['min']}."
         if "max" in cfg and numero > cfg["max"]:
@@ -93,7 +95,7 @@ def validar(encuesta, respuestas, importado=False):
 
     - Solo se conservan las preguntas visibles; las respuestas a preguntas
       ocultas se descartan sin error (el usuario pudo cambiar de rama).
-    - `limpias` lleva los enteros ya convertidos a int.
+    - `limpias` lleva los números ya convertidos (int o float).
     - `errores` es {codigo: mensaje}; vacío si todo es válido.
     - `importado`: para respuestas traídas de Microsoft/Google Forms. No exige las
       obligatorias ni la cantidad de opciones, porque el formulario cambió durante la

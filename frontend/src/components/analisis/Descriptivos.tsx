@@ -58,7 +58,7 @@ export default function Descriptivos({ variables, filas, slug }: { variables: Va
 
   const histograma = RANGOS.map((r) => ({
     clave: r.etiqueta, etiqueta: r.etiqueta,
-    valor: conAnios.filter((f) => numero(f, 'anios_profesional') >= r.desde && numero(f, 'anios_profesional') <= r.hasta).length,
+    valor: conAnios.filter((f) => numero(f, 'anios_profesional') >= r.desde && numero(f, 'anios_profesional') < r.hasta + 1).length,
     destacado: r.hasta < UMBRAL_JUNIOR,
   }))
 
