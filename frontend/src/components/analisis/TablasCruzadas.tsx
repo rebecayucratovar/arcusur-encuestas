@@ -89,6 +89,14 @@ export default function TablasCruzadas({ variables, filas, inicial }: {
               </tfoot>
             </table>
           </div>
+          <div className="calor__leyenda" role="img"
+            aria-label={`Escala de color: de ${mostrar(0)} (claro) a ${mostrar(maximo)} (oscuro)`}>
+            <span>{mostrar(0)}</span>
+            <span className="calor__degradado" aria-hidden="true"
+              style={{ background: `linear-gradient(to right, ${colorCalor(0).background}, ${colorCalor(0.5).background}, ${colorCalor(1).background})` }} />
+            <span>{mostrar(maximo)}</span>
+            <small>{modo === 'frecuencias' ? 'personas por celda' : '% de la fila'}</small>
+          </div>
           <p className="calor__nota">
             La intensidad del color indica la magnitud de cada celda frente a la mayor de la tabla.
             {modo === 'porcentaje' && ' En "% por fila", cada fila suma 100%.'} n = {t.n} personas que respondieron ambas preguntas.

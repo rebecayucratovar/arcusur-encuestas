@@ -169,6 +169,18 @@ export default function Escenarios() {
                   { nombre: 'Línea base', color: 'var(--serie-1)', valores: r.proyeccion.map((x) => x.base), discontinua: true },
                   { nombre: 'Escenario', color: 'var(--serie-2)', valores: r.proyeccion.map((x) => x.escenario) },
                 ]} />
+                <div className="tabla-panel__desplazable">
+                  <table className="tabla-datos escenarios__proyeccion">
+                    <caption className="sr-only">Valores proyectados por año</caption>
+                    <thead>
+                      <tr><th scope="col">Año</th>{r.proyeccion.map((x) => <th key={x.anio} scope="col">{x.anio}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      <tr><th scope="row">Línea base</th>{r.proyeccion.map((x) => <td key={x.anio}>{num(x.base)}</td>)}</tr>
+                      <tr><th scope="row">Escenario</th>{r.proyeccion.map((x) => <td key={x.anio}>{num(x.escenario)}</td>)}</tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
 

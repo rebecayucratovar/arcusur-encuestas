@@ -10,17 +10,29 @@ export interface Serie {
   discontinua?: boolean
 }
 
-function Leyenda({ series, linea }: { series: Serie[]; linea?: boolean }) {
+function Leyenda({ series, linea, ocultas, alternar }: {
+  series: Serie[]; linea?: boolean
+  /** Si se indica, cada elemento es un botón que muestra u oculta su serie. */
+  ocultas?: Set<string>; alternar?: (nombre: string) => void
+}) {
   return (
     <ul className="leyenda leyenda--fila leyenda--centro">
-      {series.map((s) => (
-        <li key={s.nombre}>
-          {linea
-            ? <svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke={s.color} strokeWidth="2" strokeDasharray={s.discontinua ? '4 3' : undefined} /></svg>
-            : <span className="leyenda__marca" style={{ background: s.color }} />}
-          {s.nombre}
-        </li>
-      ))}
+      {series.map((s) => {
+        const marca = linea
+          ? <svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke={s.color} strokeWidth="2" strokeDasharray={s.discontinua ? '4 3' : undefined} /></svg>
+          : <span className="leyenda__marca" style={{ background: s.color }} />
+        return (
+          <li key={s.nombre}>
+            {alternar ? (
+              <button type="button" className={`leyenda__boton${ocultas?.has(s.nombre) ? ' leyenda__boton--oculta' : ''}`}
+                aria-pressed={!ocultas?.has(s.nombre)} title="Mostrar u ocultar esta serie"
+                onClick={() => alternar(s.nombre)}>
+                {marca}{s.nombre}
+              </button>
+            ) : <>{marca}{s.nombre}</>}
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -126,6 +138,14 @@ export function Radar({ ejes, series }: { ejes: string[]; series: Serie[] }) {
   const angulo = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / ejes.length
   const punto = (i: number, v: number) => [cx + Math.cos(angulo(i)) * R * (v / 100), cy + Math.sin(angulo(i)) * R * (v / 100)]
   const anillos = [25, 50, 75, 100]
+  const [ocultas, setOcultas] = useState<Set<string>>(new Set())
+  const alternar = (nombre: string) => setOcultas((prev) => {
+    const sig = new Set(prev)
+    if (sig.has(nombre)) sig.delete(nombre)
+    else sig.add(nombre)
+    return sig
+  })
+  const visibles = series.filter((s) => !ocultas.has(s.nombre))
 
   return (
     <div className="radar">
@@ -146,7 +166,7 @@ export function Radar({ ejes, series }: { ejes: string[]; series: Serie[] }) {
             </g>
           )
         })}
-        {series.map((s) => (
+        {visibles.map((s) => (
           <g key={s.nombre}>
             <polygon points={s.valores.map((v, i) => punto(i, v).join(',')).join(' ')}
               fill={s.color} fillOpacity="0.1" stroke={s.color} strokeWidth="2" strokeLinejoin="round"
@@ -158,7 +178,7 @@ export function Radar({ ejes, series }: { ejes: string[]; series: Serie[] }) {
           </g>
         ))}
       </svg>
-      <Leyenda series={series} linea />
+      <Leyenda series={series} linea ocultas={ocultas} alternar={alternar} />
     </div>
   )
 }

@@ -111,7 +111,18 @@ def validar(encuesta, respuestas, importado=False):
         if not evaluar(q["display_condition"], limpias):
             continue
         visibles.add(q["code"])
-        valor = _normalizar(respuestas.get(q["code"]))
+        crudo = respuestas.get(q["code"])
+        valor = _normalizar(crudo)
+        if (
+            valor is not None
+            and not importado
+            and q["configuration"].get("input") == "decimal"
+            and isinstance(crudo, str)
+            and crudo != crudo.strip()
+        ):
+            # En el formulario la regla es «solo un número, sin espacios»; los CSV sí se recortan.
+            errores[q["code"]] = "Introduzca solo un número, sin espacios (puede usar decimales)."
+            continue
         if valor is None:
             if q["required"] and not importado:
                 errores[q["code"]] = OBLIGATORIA

@@ -49,7 +49,9 @@ function validarValor(q: Question, valor: AnswerValue, visibles: Answers, import
 
   if (q.question_type === 'email') return RE_EMAIL.test(texto) ? null : 'Correo electrónico no válido.'
   if (cfg.input === 'decimal') {
-    if (!RE_NUMERO.test(texto)) return 'Introduzca solo un número, sin espacios (puede usar decimales).'
+    // En el formulario la regla es «solo un número, sin espacios»; los archivos importados se recortan.
+    const sinRecortar = importado ? texto : valor
+    if (!RE_NUMERO.test(sinRecortar)) return 'Introduzca solo un número, sin espacios (puede usar decimales).'
     const n = Number(texto.replace(',', '.'))
     if (cfg.min !== undefined && n < cfg.min) return `El valor mínimo es ${cfg.min}.`
     if (cfg.max !== undefined && n > cfg.max) return `El valor máximo es ${cfg.max}.`

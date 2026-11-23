@@ -13,3 +13,7 @@ dist/
 *.csv
 *.xlsx
 .DS_Store
+
+# Reportes de cobertura de pruebas
+coverage/
+.coverage

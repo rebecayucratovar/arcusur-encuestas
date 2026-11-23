@@ -70,7 +70,8 @@ def test_otra_asignatura_no_cuenta_para_el_limite(titulados):
     assert limpias["otra_ventaja"] == "Sistemas Operativos"
 
 
-@pytest.mark.parametrize("valor, esperado", [("7", 7), (" 7 ", 7), ("7.5", 7.5), ("1,5", 1.5), ("7.0", 7),
+@pytest.mark.parametrize("valor, esperado", [("7", 7), ("7.5", 7.5), ("1,5", 1.5), ("7.0", 7),
+                                             (" 7", None), ("7 ", None), ("7 5", None),  # «sin espacios» (TC-05)
                                              ("siete", None), ("-1", None), ("61", None)])
 def test_anios_profesional_numero(titulados, valor, esperado):
     respuestas = respuesta_valida(titulados) | {"anios_profesional": valor, "anios_desempleado": "0"}
@@ -183,3 +184,16 @@ def test_importado_no_exige_obligatorias_ni_cantidad(titulados):
 def test_importado_sigue_validando_valores(titulados):
     respuestas = respuesta_valida(titulados) | {"edad": "inventada"}
     assert validar(titulados, respuestas, importado=True)[1] == {"edad": "Opción no válida."}
+
+
+def test_anios_con_espacios_mensaje_claro(titulados):
+    respuestas = respuesta_valida(titulados) | {"anios_profesional": " 7", "anios_desempleado": "0"}
+    assert validar(titulados, respuestas)[1] == {
+        "anios_profesional": "Introduzca solo un número, sin espacios (puede usar decimales)."}
+
+
+def test_importado_recorta_espacios_en_numeros(titulados):
+    respuestas = respuesta_valida(titulados) | {"anios_profesional": " 7 ", "anios_desempleado": "0"}
+    limpias, errores = validar(titulados, respuestas, importado=True)
+    assert errores == {}
+    assert limpias["anios_profesional"] == 7

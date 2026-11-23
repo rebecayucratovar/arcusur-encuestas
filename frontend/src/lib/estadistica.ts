@@ -35,6 +35,16 @@ function lnGamma(x: number): number {
   return -tmp + Math.log((Math.sqrt(2 * Math.PI) * ser) / x)
 }
 
+const DIMINUTO = 1e-300
+
+/**
+ * Protección del método de Lentz: un valor casi cero se reemplaza por DIMINUTO para
+ * no dividir entre cero. Exportada para probar sus dos ramas (caja blanca).
+ */
+export function evitarCero(v: number): number {
+  return Math.abs(v) < DIMINUTO ? DIMINUTO : v
+}
+
 /** Función gamma incompleta regularizada superior Q(a, x). */
 function gammaQ(a: number, x: number): number {
   if (x <= 0) return 1
@@ -51,18 +61,15 @@ function gammaQ(a: number, x: number): number {
     return 1 - suma * Math.exp(-x + a * Math.log(x) - gln)
   }
   // Fracción continua (método de Lentz) para Q(a, x).
-  const diminuto = 1e-300
   let b = x + 1 - a
-  let c = 1 / diminuto
+  let c = 1 / DIMINUTO
   let d = 1 / b
   let h = d
   for (let i = 1; i < 500; i++) {
     const an = -i * (i - a)
     b += 2
-    d = an * d + b
-    if (Math.abs(d) < diminuto) d = diminuto
-    c = b + an / c
-    if (Math.abs(c) < diminuto) c = diminuto
+    d = evitarCero(an * d + b)
+    c = evitarCero(b + an / c)
     d = 1 / d
     const delta = d * c
     h *= delta

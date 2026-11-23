@@ -5,6 +5,7 @@ import { infoOrigen, useContextoAdmin, type SlugEncuesta } from '../lib/admin'
 import { useDatosEncuesta } from '../lib/datos'
 import { exportarExcel } from '../lib/excel'
 import { exportarTablaCSV } from '../lib/exportar'
+import type { Survey } from '../types'
 import {
   aFilaRespuesta, COLUMNAS, etiquetasCatalogo, FILTRO_TABLA, textoCelda, type FilaRespuesta,
 } from '../lib/respuestas'
@@ -23,6 +24,51 @@ const fechaCompleta = (iso: string) => {
 /** Minúsculas y sin tildes, para que "educacion" encuentre "Educación". */
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
+/** Todas las respuestas de un envío, agrupadas por sección del cuestionario. */
+function Detalle({ fila, encuesta, catalogo, cerrar }: {
+  fila: FilaRespuesta; encuesta: Survey | null
+  catalogo: Record<string, Record<string, string>>; cerrar: () => void
+}) {
+  const texto = (codigo: string, valor: FilaRespuesta['valores'][string]) => {
+    const t = (v: string) => catalogo[codigo]?.[v] ?? v
+    return Array.isArray(valor) ? valor.map(t).join('; ') : t(String(valor))
+  }
+  const secciones = (encuesta?.sections ?? [])
+    .map((s) => ({ ...s, questions: s.questions.filter((q) => !vacio(fila.valores[q.code])) }))
+    .filter((s) => s.questions.length > 0)
+  const origen = infoOrigen(fila.origen)
+
+  return (
+    <section className="tabla-panel detalle-respuesta" aria-labelledby="detalle-titulo">
+      <header className="detalle-respuesta__cabecera">
+        <div>
+          <h2 id="detalle-titulo">Respuesta {fila.id}</h2>
+          <p>{fechaCompleta(fila.fecha)} · <span className={`origen ${origen.clase}`}>{origen.texto}</span></p>
+        </div>
+        <button type="button" className="boton boton--secundario" onClick={cerrar}>Cerrar detalle</button>
+      </header>
+      {secciones.length === 0 ? (
+        <p className="detalle-respuesta__vacio">Este envío no tiene respuestas registradas.</p>
+      ) : secciones.map((s) => (
+        <div key={s.id} className="detalle-respuesta__seccion">
+          <h3>{s.title}</h3>
+          <dl>
+            {s.questions.map((q) => (
+              <div key={q.code}>
+                <dt>{q.prompt.replace(/:\s*$/, '')}</dt>
+                <dd>{texto(q.code, fila.valores[q.code])}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+const vacio = (v: FilaRespuesta['valores'][string]) =>
+  v === undefined || v === '' || (Array.isArray(v) && v.length === 0)
+
 function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: string[] }) {
   const columnas = COLUMNAS[encuesta]
   const filtro = columnas.find((c) => c.codigo === FILTRO_TABLA[encuesta])!
@@ -36,6 +82,8 @@ function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: strin
   const [busqueda, setBusqueda] = useState('')
   const [valorFiltro, setValorFiltro] = useState('')
   const [pagina, setPagina] = useState(0)
+  const [idDetalle, setIdDetalle] = useState<string | null>(null)
+  const detalle = idDetalle ? todas.find((f) => f.id === idDetalle) : undefined
 
   const filas = useMemo(() => {
     const q = normalizar(busqueda.trim())
@@ -65,7 +113,7 @@ function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: strin
       <div className="admin__titulo admin__titulo--acciones">
         <div>
           <h1>Respuestas</h1>
-          <p>Registro individual de respuestas. Los datos de contacto de la red de titulados se gestionan por separado en Datos.</p>
+          <p>Registro individual de respuestas: haga clic en un ID para ver el envío completo. Los datos de contacto de la red de titulados se gestionan por separado en Datos.</p>
         </div>
         <div className="admin__acciones">
           <button type="button" className="boton boton--secundario" onClick={() => exportarTablaCSV(nombreArchivo, tablaExportable())}>
@@ -79,6 +127,9 @@ function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: strin
       </div>
 
       <EstadoDatos cargando={datos.cargando} error={datos.error} origenes={origenes} total={todas.length}>
+      {detalle && (
+        <Detalle fila={detalle} encuesta={datos.encuesta} catalogo={catalogo} cerrar={() => setIdDetalle(null)} />
+      )}
       <section className="tabla-panel">
         <div className="tabla-panel__filtros">
           <label className="filtros__campo filtros__campo--busqueda">
@@ -116,7 +167,13 @@ function Tabla({ encuesta, origenes }: { encuesta: SlugEncuesta; origenes: strin
                 const origen = infoOrigen(f.origen)
                 return (
                   <tr key={f.id}>
-                    <th scope="row">{f.id}</th>
+                    <th scope="row">
+                      <button type="button" className="tabla-respuestas__id" aria-pressed={idDetalle === f.id}
+                        title="Ver todas las respuestas de este envío"
+                        onClick={() => { setIdDetalle(f.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+                        {f.id}
+                      </button>
+                    </th>
                     <td className="tabla-respuestas__fecha">{fechaCorta(f.fecha)}</td>
                     <td><span className={`origen origen--fila ${origen.clase}`}>{origen.texto}</span></td>
                     {columnas.map((c) => {

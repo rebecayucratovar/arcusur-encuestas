@@ -147,6 +147,13 @@ export default function Encuesta({ slug, vistaPrevia = false }: { slug: string; 
     if (!q.configuration.other_for) numeros.set(q.code, numeros.size + 1)
   }
 
+  // Contador de obligatorias (visibles) y errores pendientes de toda la encuesta.
+  const pendientes = validar(encuesta, respuestas)
+  const obligatorias = seccionesVisibles.flatMap((s) => s.questions)
+    .filter((q) => q.required || q.configuration.require_one_of)
+  const respondidas = obligatorias.filter((q) => !pendientes[q.code]).length
+  const faltan = Object.keys(pendientes).length
+
   const indice = Math.max(0, seccionesVisibles.findIndex((s) => s.id === seccionId))
   const seccion = seccionesVisibles[indice]
   const esUltima = indice === seccionesVisibles.length - 1
@@ -266,7 +273,8 @@ export default function Encuesta({ slug, vistaPrevia = false }: { slug: string; 
                 vistaPrevia ? (
                   <span className="encuesta__sin-envio">Vista previa: el envío está deshabilitado</span>
                 ) : (
-                  <button type="button" className="boton" onClick={enviar} disabled={enviando}>
+                  <button type="button" className="boton" onClick={enviar} disabled={enviando || faltan > 0}
+                    aria-describedby="contador-obligatorias">
                     {enviando ? 'Enviando…' : 'Enviar'}
                   </button>
                 )
@@ -274,6 +282,18 @@ export default function Encuesta({ slug, vistaPrevia = false }: { slug: string; 
                 <button type="button" className="boton" onClick={siguiente}>Siguiente</button>
               )}
             </div>
+            <p className="encuesta__contador" id="contador-obligatorias" aria-live="polite">
+              Obligatorias respondidas: <strong>{respondidas} de {obligatorias.length}</strong>
+              {esUltima && !vistaPrevia && faltan > 0 && (
+                <>
+                  {' · '}Faltan {faltan} {faltan === 1 ? 'respuesta' : 'respuestas'} para enviar.{' '}
+                  <button type="button" className="enlace encuesta__ir-pendiente"
+                    onClick={() => { setErrores(pendientes); irASeccionConError(pendientes) }}>
+                    Ir a la primera pendiente
+                  </button>
+                </>
+              )}
+            </p>
             <div className="progreso">
               <span>Página {indice + 1} de {seccionesVisibles.length}</span>
               <div className="progreso__barra" role="progressbar" aria-valuemin={1}
