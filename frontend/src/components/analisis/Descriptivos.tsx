@@ -6,6 +6,7 @@ import { valoresDe, type Variable } from '../../lib/variables'
 import { Columnas } from '../graficos/Graficos'
 import { IconoIdea } from '../Iconos'
 import { BotonExportar } from './Comunes'
+import MedidasCompletas from './MedidasCompletas'
 
 const UMBRAL_JUNIOR = 5 // años de vida profesional: junior < 5 ≤ consolidado
 
@@ -135,6 +136,8 @@ export default function Descriptivos({ variables, filas, slug }: { variables: Va
           </div>
         </>
       )}
+
+      {tieneAnios && <MedidasCompletas filas={filas} slug={slug} />}
 
       <section className="tabla-panel analisis__likert">
         <header className="analisis__cabecera-tabla">

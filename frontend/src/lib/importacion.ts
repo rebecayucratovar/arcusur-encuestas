@@ -230,14 +230,36 @@ const cortar = (s: string, n = 30) => (s.length > n ? `${s.slice(0, n - 1)}…` 
 /** Respuestas de relleno en campos de texto ("-", ".", "N/a", "ninguno"). */
 const RELLENO = /^(n ?a|na|s ?n|x+|no|nada|ninguno|ninguna|ningun|no tengo|sin respuesta|prefiero no responder)$/
 
-/** "2 años" → 2, "1,5" → 1.5, "6 meses" → 0.5, "ninguno" → 0; null si no hay un número. */
-function interpretarAnios(texto: string): number | null {
+/** Números escritos en letras que aparecen en las respuestas de años ("Dos años", "un año y medio"). */
+const NUMEROS_EN_LETRAS: Record<string, number> = {
+  un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+  once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18,
+  diecinueve: 19, veinte: 20, veintiuno: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+  treinta: 30, cuarenta: 40, medio: 0.5,
+}
+
+/**
+ * "2 años" → 2, "1,5" → 1.5, "6 meses" → 0.5, "ninguno" → 0, "Dos años" → 2,
+ * "un año y medio" → 1.5; null si no hay una cantidad. "Más de 10 años" devuelve null:
+ * es un intervalo abierto, no un valor, y se informa aparte.
+ */
+export function interpretarAnios(texto: string): number | null {
   const n = normalizar(texto)
   if (/^(ninguno|ninguna|nada|cero)\b/.test(n)) return 0
   const m = texto.trim().toLowerCase().match(/^(?:unos?\s+|aprox\.?\s*)?(\d+(?:[.,]\d+)?)\s*(meses|mes)?/)
-  if (!m) return null
-  const valor = Number(m[1].replace(',', '.'))
-  return Math.round((m[2] ? valor / 12 : valor) * 100) / 100
+  let valor: number
+  let meses: boolean
+  if (m) {
+    valor = Number(m[1].replace(',', '.'))
+    meses = Boolean(m[2])
+  } else {
+    // En letras: "dos anos", "un ano y medio", "seis meses", "medio ano".
+    const l = n.match(/^(?:unos? |aprox )?([a-z]+)(?: (anos?|meses|mes))?(?: y medio)?$/)
+    if (!l || !(l[1] in NUMEROS_EN_LETRAS)) return null
+    valor = NUMEROS_EN_LETRAS[l[1]] + (n.endsWith(' y medio') ? 0.5 : 0)
+    meses = l[2] === 'meses' || l[2] === 'mes'
+  }
+  return Math.round((meses ? valor / 12 : valor) * 100) / 100
 }
 
 interface Conversion { valor?: string | string[]; error?: string; nota?: string }

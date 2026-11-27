@@ -1,7 +1,9 @@
 // Pruebas de caja blanca de estadistica.ts: cada caso recorre un camino
 // concreto del código (rama, condición o bucle), indicado en su nombre.
 import { describe, expect, it } from 'vitest'
-import { chiCuadrado, descriptivos, evitarCero, intensidad, pValorChi2 } from './estadistica'
+import {
+  chiCuadrado, cuantil, descriptivos, evitarCero, intensidad, pValorChi2, resumen, tablaIntervalos, tablaValores,
+} from './estadistica'
 
 describe('descriptivos', () => {
   it('CB-01 lista vacía: n === 0 devuelve null', () => {
@@ -110,5 +112,85 @@ describe('evitarCero (protección de la fracción continua de Lentz)', () => {
     expect(evitarCero(-1e-320)).toBe(1e-300)
     expect(evitarCero(2.5)).toBe(2.5)
     expect(evitarCero(-3)).toBe(-3)
+  })
+})
+
+describe('cuantil (CUARTIL.INC de Excel)', () => {
+  it('CB-18 posición entera, interpolada y en el último dato', () => {
+    const v = [1, 2, 3, 4, 5]
+    expect(cuantil(v, 0.5)).toBe(3) // posición 3
+    expect(cuantil([1, 2, 3, 4], 0.25)).toBe(1.75) // posición 1,75
+    expect(cuantil(v, 1)).toBe(5) // posición n: no hay dato siguiente
+  })
+})
+
+describe('resumen', () => {
+  it('CB-19 lista vacía devuelve null', () => {
+    expect(resumen([Number.NaN])).toBeNull()
+  })
+
+  it('CB-20 datos del pizarrón: moda, varianza, CV, cuartiles, vallas y atípicos', () => {
+    const r = resumen([2, 4, 4, 4, 5, 5, 7, 9, 40])!
+    expect(r.suma).toBe(80)
+    expect(r.modas).toEqual([4])
+    expect(r.frecuenciaModa).toBe(3)
+    expect(r.rango).toBe(38)
+    expect(r.q1).toBe(4)
+    expect(r.q3).toBe(7)
+    expect(r.ric).toBe(3)
+    expect(r.vallaSuperior).toBe(11.5)
+    expect(r.atipicos).toEqual([40])
+    expect(r.varianza).toBeCloseTo(r.sumaCuadrados / 8, 10)
+    expect(r.cv).toBeCloseTo((r.de / r.media) * 100, 10)
+    expect(r.asimetria!).toBeGreaterThan(2) // cola larga a la derecha
+  })
+
+  it('CB-21 sin valores repetidos no hay moda; con dos datos no hay asimetría', () => {
+    const r = resumen([3, 8])!
+    expect(r.modas).toEqual([])
+    expect(r.asimetria).toBeNull()
+  })
+
+  it('CB-22 todos iguales: varianza 0 y asimetría 0; media 0 deja el CV sin definir', () => {
+    expect(resumen([5, 5, 5])!.asimetria).toBe(0)
+    const ceros = resumen([0, 0, 0])!
+    expect(ceros.cv).toBeNull()
+    expect(ceros.modas).toEqual([0])
+    expect(resumen([7])!.varianza).toBe(0)
+  })
+
+  it('CB-23 coincide con Excel en los 180 años de vida profesional (medias del informe)', () => {
+    // Distribución de la Tabla 1 del informe (n = 180 con «Dos años» = 2).
+    const tabla: [number, number][] = [[0, 2], [1, 25], [1.5, 1], [2, 22], [3, 12], [4, 9], [5, 13], [6, 7], [7, 6],
+      [8, 6], [9, 2], [10, 4], [11, 2], [12, 9], [13, 6], [14, 10], [15, 10], [16, 3], [17, 3], [18, 1], [19, 1],
+      [20, 10], [21, 2], [22, 3], [23, 3], [25, 4], [26, 1], [28, 2], [35, 1]]
+    const datos = tabla.flatMap(([x, f]) => Array<number>(f).fill(x))
+    const r = resumen(datos)!
+    expect(r.n).toBe(180)
+    expect(r.media).toBeCloseTo(9.0306, 4)
+    expect(r.mediana).toBe(6)
+    expect(r.varianza).toBeCloseTo(58.531, 3)
+    expect(r.de).toBeCloseTo(7.6506, 4)
+    expect([r.q1, r.q3, r.p90]).toEqual([2, 14, 20])
+    expect(r.asimetria!).toBeCloseTo(0.8144, 4)
+  })
+})
+
+describe('tablas de frecuencia', () => {
+  it('CB-24 intervalos [a, b): cada dato cae en un solo intervalo y Fi termina en n', () => {
+    const t = tablaIntervalos([0, 4.9, 5, 12, 35], 5)
+    expect(t.map((f) => f.fi)).toEqual([2, 1, 1, 0, 0, 0, 0, 1])
+    expect(t.at(-1)).toMatchObject({ etiqueta: '[35, 40)', Fi: 5, Hi: 1, marca: 37.5 })
+  })
+
+  it('CB-25 sin datos o con ancho inválido devuelve una tabla vacía', () => {
+    expect(tablaIntervalos([], 5)).toEqual([])
+    expect(tablaIntervalos([1, 2], 0)).toEqual([])
+  })
+
+  it('CB-26 tabla por valor: un renglón por valor distinto', () => {
+    const t = tablaValores([2, 1, 2, Number.NaN])
+    expect(t.map((f) => [f.desde, f.fi, f.Fi])).toEqual([[1, 1, 1], [2, 2, 3]])
+    expect(t[1].Hi).toBe(1)
   })
 })

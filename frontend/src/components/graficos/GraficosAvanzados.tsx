@@ -183,6 +183,45 @@ export function Radar({ ejes, series }: { ejes: string[]; series: Serie[] }) {
   )
 }
 
+// ---------------------------------------------------------------- diagrama de caja
+
+/** Caja de Q1 a Q3 con la mediana; bigotes hasta el último dato dentro de las vallas; atípicos como puntos. */
+export function DiagramaCaja({ min, q1, mediana, q3, max, media, atipicos, valla }: {
+  min: number; q1: number; mediana: number; q3: number; max: number; media: number; atipicos: number[]; valla: number
+}) {
+  const W = 640, H = 170, izq = 24, der = 24, cy = 80, alto = 44
+  const marcas = escala(Math.max(1, max, valla, ...atipicos))
+  const tope = marcas[marcas.length - 1]
+  const x = (v: number) => izq + (v / tope) * (W - izq - der)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="caja__svg" role="img"
+      aria-label={`Diagrama de caja: mínimo ${num(min)}, Q1 ${num(q1)}, mediana ${num(mediana)}, Q3 ${num(q3)}, máximo sin atípicos ${num(max)}${atipicos.length ? `, atípicos ${atipicos.map((a) => num(a)).join(', ')}` : ''}`}>
+      {marcas.map((m) => (
+        <g key={m}>
+          <line x1={x(m)} x2={x(m)} y1={H - 30} y2={H - 26} className="lineas__guia" />
+          <text x={x(m)} y={H - 12} textAnchor="middle" className="lineas__eje">{m}</text>
+        </g>
+      ))}
+      <line x1={izq} x2={W - der} y1={H - 30} y2={H - 30} className="lineas__guia" />
+      <line x1={x(valla)} x2={x(valla)} y1={20} y2={H - 30} className="caja__valla" />
+      <text x={x(valla)} y={14} textAnchor="middle" className="lineas__eje">Valla {num(valla)}</text>
+      <line x1={x(min)} x2={x(q1)} y1={cy} y2={cy} className="caja__bigote" />
+      <line x1={x(q3)} x2={x(max)} y1={cy} y2={cy} className="caja__bigote" />
+      <line x1={x(min)} x2={x(min)} y1={cy - 12} y2={cy + 12} className="caja__bigote" />
+      <line x1={x(max)} x2={x(max)} y1={cy - 12} y2={cy + 12} className="caja__bigote" />
+      <rect x={x(q1)} y={cy - alto / 2} width={Math.max(1, x(q3) - x(q1))} height={alto} className="caja__caja"><title>{`Q1 ${num(q1)} · Q3 ${num(q3)}`}</title></rect>
+      <line x1={x(mediana)} x2={x(mediana)} y1={cy - alto / 2} y2={cy + alto / 2} className="caja__mediana" />
+      <path d={`M ${x(media)} ${cy - 6} l 6 6 l -6 6 l -6 -6 z`} className="caja__media"><title>{`Media ${num(media, 2)}`}</title></path>
+      <text x={x(q1)} y={cy - alto / 2 - 8} textAnchor="middle" className="lineas__eje">Q1 {num(q1)}</text>
+      <text x={x(mediana)} y={cy + alto / 2 + 16} textAnchor="middle" className="lineas__eje">Me {num(mediana)}</text>
+      <text x={x(q3)} y={cy - alto / 2 - 8} textAnchor="middle" className="lineas__eje">Q3 {num(q3)}</text>
+      {atipicos.map((a, i) => (
+        <circle key={`${a}-${i}`} cx={x(a)} cy={cy} r="5" className="caja__atipico"><title>{`Atípico: ${num(a)}`}</title></circle>
+      ))}
+    </svg>
+  )
+}
+
 // ---------------------------------------------------------------- nube de términos
 
 export interface Termino { termino: string; tipo: 'area' | 'herramienta'; menciones: number }
