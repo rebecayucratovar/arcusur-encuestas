@@ -513,6 +513,15 @@ textarea.campo { resize: vertical; }
 .tabla-esperadas tbody th span { margin: 0; max-width: 140px; }
 .tabla-esperadas td span { color: var(--texto-suave); }
 .tabla-esperadas__baja { color: #b45309 !important; font-weight: 600; }
+.capas { margin-top: 28px; padding-top: 8px; border-top: 1px solid var(--borde-suave); }
+.capas__titulo { margin-top: 16px; color: var(--marino); font-size: 18px; font-weight: 700; }
+.capas__explicacion { max-width: 860px; line-height: 1.5; }
+.capas__lectura { margin-top: 16px; }
+.capas__lista { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; margin-top: 16px; align-items: start; }
+.capas__n { margin-left: auto; color: var(--texto-suave); font-size: 13px; font-weight: 500; }
+.capas__cifras { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 10px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.capas__decision { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: #f1f3f6; color: var(--texto-suave); font-size: 12px; font-weight: 600; }
+.capas__decision--si { background: #e7f6ec; color: #17663a; }
 
 .kpis--tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .kpi strong small { font-size: 15px; font-weight: 500; opacity: 0.75; }

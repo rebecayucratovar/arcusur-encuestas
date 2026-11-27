@@ -17,6 +17,8 @@ export interface Variable {
   puntajes?: Record<string, number>
   multiple: boolean
   numerica: boolean
+  /** Variable agrupada: calcula su categoría a partir de otra pregunta (no está en el formulario). */
+  derivar?: (fila: Fila) => string | undefined
 }
 
 // Nombres cortos para listas y tablas (el enunciado completo se ve como ayuda).
@@ -75,8 +77,78 @@ export function variables(encuesta: Survey | null): Variable[] {
   return lista
 }
 
-/** Variables categóricas de una sola respuesta (sirven para cruzar y para chi-cuadrada). */
-export const categoricas = (vs: Variable[]) => vs.filter((v) => v.opciones.length > 0 && !v.multiple)
+// Agrupaciones usadas en el informe para que las tablas cumplan la regla de Cochran
+// (pocas respuestas por celda en las categorías originales).
+type Grupo = [valor: string, etiqueta: string, valoresBase: string[]]
+const ACUERDO: Grupo[] = [
+  ['acuerdo', 'De acuerdo', ['de_acuerdo', 'totalmente_acuerdo']],
+  ['desacuerdo', 'En desacuerdo', ['totalmente_desacuerdo', 'en_desacuerdo']],
+]
+const AGRUPACIONES: { codigo: string; base: string; nombre: string; grupos: Grupo[] }[] = [
+  { codigo: 'remuneracion_3', base: 'remuneracion', nombre: 'Remuneración (3 rangos)', grupos: [
+    ['hasta_5000', 'Hasta Bs 5.000', ['menos_2500', '2500_3500', '3501_5000']],
+    ['5001_10000', 'Bs 5.001 – 10.000', ['5001_7000', '7001_10000']],
+    ['mas_10000', 'Más de Bs 10.000', ['mas_10000']],
+  ] },
+  { codigo: 'remuneracion_2', base: 'remuneracion', nombre: 'Remuneración (2 rangos)', grupos: [
+    ['hasta_5000', 'Hasta Bs 5.000', ['menos_2500', '2500_3500', '3501_5000']],
+    ['mas_5000', 'Más de Bs 5.000', ['5001_7000', '7001_10000', 'mas_10000']],
+  ] },
+  { codigo: 'satisfaccion_2', base: 'satisfaccion_carrera', nombre: 'Satisfacción (agrupada)', grupos: ACUERDO },
+  { codigo: 'concordancia_2', base: 'concordancia_formacion', nombre: 'Concordancia (agrupada)', grupos: ACUERDO },
+  { codigo: 'pertinencia_2', base: 'pertinencia_trabajo', nombre: 'Pertinencia (agrupada)', grupos: ACUERDO },
+  { codigo: 'nivel_2', base: 'nivel_formacion', nombre: 'Nivel del programa (agrupado)', grupos: [
+    ['diplomado', 'Diplomado', ['diplomado']],
+    ['especialidad_o_mas', 'Especialidad o superior', ['especialidad', 'maestria', 'doctorado', 'posdoctorado']],
+  ] },
+  { codigo: 'financiamiento_2', base: 'financiamiento', nombre: 'Financiamiento (agrupado)', grupos: [
+    ['propios', 'Recursos propios', ['recursos_propios']],
+    ['beca', 'Beca total o parcial', ['beca_total', 'beca_parcial']],
+  ] },
+]
+
+/** Años de vida profesional que separan a los junior de los consolidados. */
+export const UMBRAL_JUNIOR = 5
+
+function derivadasDe(v: Variable): Variable[] {
+  const nueva = (codigo: string, nombre: string, valores: [string, string][], derivar: Variable['derivar']): Variable => {
+    const opciones: Option[] = valores.map(([value, label], position) => ({ id: `${codigo}-${value}`, value, label, position }))
+    return {
+      codigo, numero: v.numero, nombre, etiqueta: `P${v.numero} · ${nombre}`,
+      enunciado: `Agrupación de «${v.nombre}»: ${opciones.map((o) => o.label).join(' / ')}`,
+      tipo: 'single_choice', opciones, multiple: false, numerica: false, derivar,
+    }
+  }
+  if (v.codigo === 'anios_profesional') {
+    return [nueva('experiencia', 'Experiencia (junior / consolidado)', [
+      ['junior', `Junior (< ${UMBRAL_JUNIOR} años)`],
+      ['consolidado', `Consolidado (≥ ${UMBRAL_JUNIOR} años)`],
+    ], (f) => {
+      const crudo = f[v.codigo]
+      const x = typeof crudo === 'string' && crudo.trim() !== '' ? Number(crudo) : NaN
+      if (!Number.isFinite(x)) return undefined
+      return x < UMBRAL_JUNIOR ? 'junior' : 'consolidado'
+    })]
+  }
+  return AGRUPACIONES.filter((a) => a.base === v.codigo).map((a) => nueva(
+    a.codigo, a.nombre, a.grupos.map(([value, label]) => [value, label]),
+    (f) => a.grupos.find(([, , base]) => base.includes(String(f[v.codigo])))?.[0],
+  ))
+}
+
+/** Variables categóricas de una sola respuesta (sirven para cruzar y para chi-cuadrada),
+ * cada una seguida de sus agrupaciones. */
+export const categoricas = (vs: Variable[]) => vs.flatMap((v) => [
+  ...(v.opciones.length > 0 && !v.multiple ? [v] : []),
+  ...derivadasDe(v),
+])
+
+/** Categoría de una fila en una variable de una sola respuesta (undefined si no respondió). */
+export function categoriaDe(fila: Fila, v: Variable): string | undefined {
+  if (v.derivar) return v.derivar(fila)
+  const x = fila[v.codigo]
+  return typeof x === 'string' && x !== '' ? x : undefined
+}
 
 /** Valores elegidos por una fila en una variable (lista vacía si no respondió). */
 export function valoresDe(fila: Fila, codigo: string): string[] {
@@ -101,8 +173,10 @@ export function tablaCruzada(datos: Fila[], vf: Variable, vc: Variable): TablaCr
   const matriz = vf.opciones.map(() => vc.opciones.map(() => 0))
   let n = 0
   for (const f of datos) {
-    const i = vf.opciones.findIndex((o) => o.value === f[vf.codigo])
-    const j = vc.opciones.findIndex((o) => o.value === f[vc.codigo])
+    const a = categoriaDe(f, vf)
+    const b = categoriaDe(f, vc)
+    const i = vf.opciones.findIndex((o) => o.value === a)
+    const j = vc.opciones.findIndex((o) => o.value === b)
     if (i < 0 || j < 0) continue
     matriz[i][j]++
     n++
@@ -112,4 +186,12 @@ export function tablaCruzada(datos: Fila[], vf: Variable, vc: Variable): TablaCr
     totalFila: matriz.map((fila) => fila.reduce((a, x) => a + x, 0)),
     totalColumna: vc.opciones.map((_, j) => matriz.reduce((a, fila) => a + fila[j], 0)),
   }
+}
+
+/** Cruce de tres variables: una tabla de vf × vc por cada categoría de la variable de control. */
+export function tablasPorCapa(datos: Fila[], vf: Variable, vc: Variable, control: Variable): { capa: Option; tabla: TablaCruzada }[] {
+  return control.opciones.map((capa) => ({
+    capa,
+    tabla: tablaCruzada(datos.filter((f) => categoriaDe(f, control) === capa.value), vf, vc),
+  }))
 }

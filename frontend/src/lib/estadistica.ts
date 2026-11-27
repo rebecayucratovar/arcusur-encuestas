@@ -240,3 +240,92 @@ export function intensidad(v: number): string {
   if (v < 0.5) return 'moderada'
   return 'fuerte'
 }
+
+export interface ResultadoFisher {
+  /** p-valor bilateral: suma de las tablas con los mismos totales tan o menos probables que la observada. */
+  p: number
+  /** Razón de momios (a·d)/(b·c); Infinity si b·c = 0. */
+  razonMomios: number
+}
+
+/**
+ * Prueba exacta de Fisher para una tabla 2×2 [[a, b], [c, d]].
+ * Fija los totales de filas y columnas: la celda a sigue una distribución hipergeométrica.
+ * Se usa cuando falla la regla de Cochran (esperadas < 5), porque no depende de aproximar a χ².
+ */
+export function fisherExacto(t: number[][]): ResultadoFisher | null {
+  if (t.length !== 2 || t.some((f) => f.length !== 2)) return null
+  const [[a, b], [c, d]] = t
+  const f1 = a + b, f2 = c + d, c1 = a + c, n = f1 + f2
+  if (f1 === 0 || f2 === 0 || c1 === 0 || c1 === n) return null
+  const lnF = (x: number) => lnGamma(x + 1)
+  const fijo = lnF(f1) + lnF(f2) + lnF(c1) + lnF(n - c1) - lnF(n)
+  const prob = (x: number) => Math.exp(fijo - lnF(x) - lnF(f1 - x) - lnF(c1 - x) - lnF(f2 - c1 + x))
+  const pObs = prob(a)
+  let p = 0
+  for (let x = Math.max(0, c1 - f2); x <= Math.min(f1, c1); x++) {
+    const px = prob(x)
+    if (px <= pObs * (1 + 1e-7)) p += px
+  }
+  return { p: Math.min(1, p), razonMomios: b * c === 0 ? Infinity : (a * d) / (b * c) }
+}
+
+/** χ² con corrección de continuidad de Yates para una tabla 2×2 (más conservadora con n pequeño). */
+export function chiYates(t: number[][]): number | null {
+  if (t.length !== 2 || t.some((f) => f.length !== 2)) return null
+  const [[a, b], [c, d]] = t
+  const n = a + b + c + d
+  const den = (a + b) * (c + d) * (a + c) * (b + d)
+  if (den === 0) return null
+  return (n * Math.max(0, Math.abs(a * d - b * c) - n / 2) ** 2) / den
+}
+
+/** Regla de Cochran: la aproximación χ² falla si más del 20 % de las esperadas son < 5 o alguna es < 1. */
+export const fallaCochran = (r: ResultadoChi2) => r.celdasBajas / r.totalCeldas > 0.2 || r.esperadaMinima < 1
+
+/** Tabla sin las filas ni columnas vacías (las que entran en la prueba). */
+export const tablaUsada = (t: number[][], r: ResultadoChi2) => r.filas.map((i) => r.columnas.map((j) => t[i][j]))
+
+export interface CapaChi2 {
+  resultado: ResultadoChi2 | null
+  fisher: ResultadoFisher | null
+  /** p con que se decide: el de Fisher si la tabla es 2×2 y falla Cochran; si no, el de χ². */
+  pDecision: number
+  metodo: 'chi2' | 'fisher'
+}
+
+export interface ResultadoEstratificado {
+  capas: CapaChi2[]
+  /** Suma de χ² y de gl de las capas que se pudieron calcular (χ² por estratos). */
+  chi2: number
+  gl: number
+  p: number
+  /** Capas con pDecision < α. */
+  significativas: number
+  calculadas: number
+}
+
+/** Prueba de una tabla, eligiendo Fisher cuando la aproximación χ² no es fiable. */
+export function probarTabla(t: number[][]): CapaChi2 {
+  const resultado = chiCuadrado(t)
+  if (!resultado) return { resultado, fisher: null, pDecision: NaN, metodo: 'chi2' }
+  const fisher = fisherExacto(tablaUsada(t, resultado))
+  const usarFisher = fisher !== null && fallaCochran(resultado)
+  return { resultado, fisher, pDecision: usarFisher ? fisher.p : resultado.p, metodo: usarFisher ? 'fisher' : 'chi2' }
+}
+
+/**
+ * Cruce de tres variables: repite la prueba de independencia dentro de cada categoría
+ * de la variable de control y suma los χ² y los gl (las capas son muestras independientes).
+ */
+export function chiPorCapas(tablas: number[][][], alfa = 0.05): ResultadoEstratificado {
+  const capas = tablas.map(probarTabla)
+  const validas = capas.flatMap((c) => (c.resultado ? [c.resultado] : []))
+  const chi2 = validas.reduce((s, r) => s + r.chi2, 0)
+  const gl = validas.reduce((s, r) => s + r.gl, 0)
+  return {
+    capas, chi2, gl, p: gl > 0 ? pValorChi2(chi2, gl) : NaN,
+    significativas: capas.filter((c) => c.pDecision < alfa).length,
+    calculadas: validas.length,
+  }
+}

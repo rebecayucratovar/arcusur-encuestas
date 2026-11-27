@@ -2,7 +2,8 @@
 // concreto del código (rama, condición o bucle), indicado en su nombre.
 import { describe, expect, it } from 'vitest'
 import {
-  chiCuadrado, cuantil, descriptivos, evitarCero, intensidad, pValorChi2, resumen, tablaIntervalos, tablaValores,
+  chiCuadrado, chiPorCapas, chiYates, cuantil, descriptivos, evitarCero, fallaCochran, fisherExacto, intensidad, probarTabla,
+  pValorChi2, resumen, tablaIntervalos, tablaUsada, tablaValores,
 } from './estadistica'
 
 describe('descriptivos', () => {
@@ -192,5 +193,60 @@ describe('tablas de frecuencia', () => {
     const t = tablaValores([2, 1, 2, Number.NaN])
     expect(t.map((f) => [f.desde, f.fi, f.Fi])).toEqual([[1, 1, 1], [2, 2, 3]])
     expect(t[1].Hi).toBe(1)
+  })
+})
+
+describe('prueba exacta de Fisher y cruce de tres variables', () => {
+  it('CB-27 Fisher bilateral coincide con scipy (formación × interés y sector × remuneración de los junior)', () => {
+    const a = fisherExacto([[105, 14], [50, 15]])!
+    expect(a.p).toBeCloseTo(0.056672, 6)
+    expect(a.razonMomios).toBeCloseTo(2.25, 10)
+    expect(fisherExacto([[23, 15], [10, 2]])!.p).toBeCloseTo(0.181113, 6)
+    expect(fisherExacto([[0, 5], [5, 0]])).toEqual({ p: expect.closeTo(0.0079365, 7), razonMomios: 0 })
+    expect(fisherExacto([[3, 0], [1, 4]])!.razonMomios).toBe(Infinity)
+  })
+
+  it('CB-28 Fisher no se calcula si la tabla no es 2×2 o un total es cero', () => {
+    expect(fisherExacto([[1, 2, 3], [4, 5, 6]])).toBeNull()
+    expect(fisherExacto([[1, 2]])).toBeNull()
+    expect(fisherExacto([[0, 0], [3, 4]])).toBeNull()
+    expect(fisherExacto([[2, 0], [3, 0]])).toBeNull()
+  })
+
+  it('CB-29 Yates: corrige |ad − bc| en n/2 y no baja de cero', () => {
+    expect(chiYates([[105, 14], [50, 15]])).toBeCloseTo(3.244527, 6)
+    expect(chiYates([[5, 5], [5, 6]])).toBe(0)
+    expect(chiYates([[1, 2, 3], [4, 5, 6]])).toBeNull()
+    expect(chiYates([[0, 0], [3, 4]])).toBeNull()
+  })
+
+  it('CB-30 χ² por capas: satisfacción × concordancia controlando experiencia (Tabla 50 del informe)', () => {
+    const r = chiPorCapas([[[40, 12], [4, 15]], [[60, 23], [5, 20]]])
+    expect(r.capas[0].resultado!.chi2).toBeCloseTo(18.4316, 4)
+    expect(r.capas[1].resultado!.chi2).toBeCloseTo(21.9222, 4)
+    expect(r.capas[0].fisher!.p).toBeCloseTo(4.5565e-5, 8)
+    expect([r.chi2, r.gl, r.calculadas, r.significativas]).toEqual([expect.closeTo(40.3538, 4), 2, 2, 2])
+    expect(r.capas.map((c) => c.metodo)).toEqual(['chi2', 'chi2']) // esperadas mínimas 7,23 y 9,95
+    expect(r.p).toBeCloseTo(Math.exp(-40.353762 / 2), 14) // gl = 2: p = e^(−χ²/2) = 1,727·10⁻⁹
+  })
+
+  it('CB-31 capas sin datos suficientes no suman; una capa 3×2 no lleva Fisher', () => {
+    const r = chiPorCapas([[[5, 0], [0, 0]], [[10, 2], [3, 9], [4, 4]]])
+    expect(r.capas[0]).toEqual({ resultado: null, fisher: null, pDecision: NaN, metodo: 'chi2' })
+    expect(r.capas[1].fisher).toBeNull()
+    expect(r.capas[1].metodo).toBe('chi2') // falla Cochran (2 de 6 esperadas < 5) pero no es 2×2
+    expect([r.calculadas, r.gl]).toEqual([1, 2])
+    expect(Number.isNaN(chiPorCapas([[[1, 0], [0, 0]]]).p)).toBe(true)
+  })
+
+  it('CB-32 con esperadas < 5 en una 2×2 se decide con Fisher (sector × remuneración, consolidados y junior)', () => {
+    const c = probarTabla([[23, 15], [10, 2]])
+    expect(fallaCochran(c.resultado!)).toBe(true)
+    expect(c.metodo).toBe('fisher')
+    expect(c.pDecision).toBeCloseTo(0.181113, 6)
+    const sinVacias = probarTabla([[23, 0, 15], [10, 0, 2]])
+    expect(tablaUsada([[23, 0, 15], [10, 0, 2]], sinVacias.resultado!)).toEqual([[23, 15], [10, 2]])
+    expect(sinVacias.pDecision).toBeCloseTo(0.181113, 6)
+    expect(probarTabla([[105, 14], [50, 15]]).metodo).toBe('chi2')
   })
 })

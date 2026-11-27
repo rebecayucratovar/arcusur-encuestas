@@ -1,7 +1,7 @@
 // Genera un .xlsx real (una hoja) sin dependencias: un .xlsx es un ZIP con
 // unos pocos XML. El ZIP va sin compresión ("store"), que Excel acepta.
 
-type Celda = string | number | null | undefined
+export type Celda = string | number | null | undefined
 
 const texto = new TextEncoder()
 

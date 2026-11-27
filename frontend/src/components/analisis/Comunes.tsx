@@ -2,8 +2,10 @@ import type { ReactNode } from 'react'
 import type { Variable } from '../../lib/variables'
 import { IconoDescargar } from '../Iconos'
 
-export function SelectorVariable({ etiqueta, variables, valor, onChange }: {
+export function SelectorVariable({ etiqueta, variables, valor, onChange, ninguna }: {
   etiqueta: string; variables: Variable[]; valor: string; onChange: (codigo: string) => void
+  /** Texto de una opción vacía (para selectores opcionales). */
+  ninguna?: string
 }) {
   const actual = variables.find((v) => v.codigo === valor)
   return (
@@ -11,6 +13,7 @@ export function SelectorVariable({ etiqueta, variables, valor, onChange }: {
       <span>{etiqueta}</span>
       <select className="campo campo--select" value={valor} title={actual?.enunciado}
         onChange={(e) => onChange(e.target.value)}>
+        {ninguna !== undefined && <option value="">{ninguna}</option>}
         {variables.map((v) => <option key={v.codigo} value={v.codigo}>{v.etiqueta}</option>)}
       </select>
     </label>
